@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Manhua Lens settings</title>
+<style>
+  body {
+    width: 240px;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #FCFEFF;
+  }
+  .header {
+    background: linear-gradient(115deg, #2E5E99, #0D2440);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header .icon {
+    width: 24px; height: 24px;
+    border-radius: 7px;
+    background: #E7F0FA;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .header .title {
+    color: #F5F9FF;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .body { padding: 16px; }
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #7BA4D0;
+    margin-bottom: 6px;
+  }
+  select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #DCE9F7;
+    background: #fff;
+    color: #0D2440;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .hint {
+    font-size: 11px;
+    color: #5C7B9C;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .status {
+    margin: 0 0 12px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #E7F0FA;
+    color: #2E5E99;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .status.error { background: #FCEBEC; color: #A94442; }
+  .activate {
+    width: 100%;
+    margin: 0 0 14px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: #2E5E99;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="icon">🦊</div>
+  <div class="title">Manhua Lens</div>
+</div>
+
+<div class="body">
+  <p class="status" id="connectionStatus">Checking this page…</p>
+  <button class="activate" id="activatePage" type="button">Activate on this page</button>
+
+  <label for="sourceLang">Reading in</label>
+  <select id="sourceLang">
+    <option value="ko">한국어 Korean</option>
+    <option value="ja">日本語 Japanese</option>
+    <option value="zh">中文 Chinese</option>
+    <option value="fr">Français French</option>
+    <option value="es">Español Spanish</option>
+  </select>
+
+  <label for="targetLang">Translate to</label>
+  <select id="targetLang">
+    <option value="en">English</option>
+    <option value="ko">한국어 Korean</option>
+    <option value="ja">日本語 Japanese</option>
+    <option value="zh">中文 Chinese</option>
+    <option value="fr">Français French</option>
+    <option value="es">Español Spanish</option>
+  </select>
+
+  <p class="hint">Version <span id="version"></span>. Select any text on a page to see it broken down and translated. Change these defaults any time — they'll be remembered.</p>
+</div>
+
+<script src="options.js"></script>
+</body>
+</html>
