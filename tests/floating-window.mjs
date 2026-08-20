@@ -66,12 +66,18 @@ const {
   normalizeAccent,
   normalizeWindowStyle,
   normalizeRotation,
+  resolveRotationPreference,
+  formatAngle,
   clampWindowGeometry,
   ACCENT_PRESETS,
   SHAPE_KEYS,
   MIN_WIDTH,
   MIN_HEIGHT,
+  ROTATE_MIN,
   ROTATE_MAX,
+  ROTATE_PRECISION,
+  DEFAULT_ROTATION,
+  ANGLE_PRESETS,
   WCAG_AA_NORMAL_TEXT,
   ACCENT_FG_LIGHT,
   ACCENT_FG_DARK,
@@ -119,6 +125,53 @@ assert.equal(clampNumber(NaN, 2, 10), 2, "NaN falls back to the minimum");
   // Rotation always grows (or preserves) the on-screen footprint.
   const box = rotatedBoundingBox(300, 200, 30);
   assert.ok(box.width > 300 && box.height > 200);
+}
+
+// ---------- arbitrary-angle rotation math ----------
+
+const ARBITRARY_ANGLES = [0, 3, 17, 37, 45, 73, 90, 119, 135, 180, -45, -137, -3, 12.5];
+
+for (const angle of ARBITRARY_ANGLES) {
+  // rotateDelta must be a pure rotation: length-preserving and reversible.
+  const dx = 37, dy = -19;
+  const local = rotateDelta(dx, dy, angle);
+  const roundTrip = rotateDelta(local.x, local.y, -angle);
+  assert.ok(Math.abs(roundTrip.x - dx) < 1e-9, `rotateDelta round-trip failed at ${angle}deg (x)`);
+  assert.ok(Math.abs(roundTrip.y - dy) < 1e-9, `rotateDelta round-trip failed at ${angle}deg (y)`);
+
+  const lenBefore = Math.hypot(dx, dy);
+  const lenAfter = Math.hypot(local.x, local.y);
+  assert.ok(Math.abs(lenBefore - lenAfter) < 1e-9, `rotateDelta changed magnitude at ${angle}deg`);
+
+  // Bounding boxes must stay finite, positive, and never smaller than the
+  // element itself is along its own diagonal.
+  const box = rotatedBoundingBox(400, 250, angle);
+  assert.ok(Number.isFinite(box.width) && Number.isFinite(box.height), `non-finite box at ${angle}deg`);
+  assert.ok(box.width > 0 && box.height > 0, `degenerate box at ${angle}deg`);
+  const diagonal = Math.hypot(400, 250);
+  assert.ok(box.width <= diagonal + 1e-9 && box.height <= diagonal + 1e-9, `box exceeds diagonal at ${angle}deg`);
+}
+
+{
+  // 180deg is visually upright again, so the footprint matches 0deg.
+  const box = rotatedBoundingBox(400, 250, 180);
+  assert.ok(Math.abs(box.width - 400) < 1e-9);
+  assert.ok(Math.abs(box.height - 250) < 1e-9);
+}
+{
+  // At 90deg width and height genuinely exchange roles.
+  const box = rotatedBoundingBox(400, 250, 90);
+  assert.ok(Math.abs(box.width - 250) < 1e-9, "90deg should swap width -> height");
+  assert.ok(Math.abs(box.height - 400) < 1e-9, "90deg should swap height -> width");
+}
+{
+  // Opposite angles produce identical footprints (abs() in the formula).
+  for (const angle of [17, 45, 73, 135]) {
+    const a = rotatedBoundingBox(400, 250, angle);
+    const b = rotatedBoundingBox(400, 250, -angle);
+    assert.ok(Math.abs(a.width - b.width) < 1e-9 && Math.abs(a.height - b.height) < 1e-9,
+      `+/-${angle}deg footprints differ`);
+  }
 }
 
 // ---------- hex/color helpers ----------
@@ -288,10 +341,94 @@ assert.equal(normalizeWindowStyle("bubble"), "bubble");
 assert.equal(normalizeWindowStyle("nonsense"), "classic");
 assert.equal(Array.from(SHAPE_KEYS).join(","), "classic,soft,compact,square,bubble");
 
-assert.equal(normalizeRotation(12.6), 13);
-assert.equal(normalizeRotation(999), ROTATE_MAX);
-assert.equal(normalizeRotation(-999), -ROTATE_MAX);
+// ---------- rotation: range, precision, and wrapping ----------
+
+assert.equal(ROTATE_MIN, -180);
+assert.equal(ROTATE_MAX, 180);
+assert.equal(DEFAULT_ROTATION, -3, "default tilt should be the subtle -3 degrees");
+assert.ok(DEFAULT_ROTATION >= -4 && DEFAULT_ROTATION <= -2, "default tilt must stay subtle");
+
+// In-range angles pass through untouched — the user is never snapped to
+// preset increments.
+for (const angle of [0, -3, 2, 7, 12.5, 17, 27, 37, 45, 63, 73, 90, 119, 135, -91, -137, 180, -180]) {
+  assert.equal(normalizeRotation(angle), angle, `${angle} must be preserved exactly`);
+}
+
+// Precision: values snap to the 0.5 grid, nothing finer.
+assert.equal(ROTATE_PRECISION, 0.5);
+assert.equal(normalizeRotation(12.5), 12.5);
+assert.equal(normalizeRotation(12.6), 12.5);
+assert.equal(normalizeRotation(12.74), 12.5);
+assert.equal(normalizeRotation(12.76), 13);
+assert.equal(normalizeRotation(-3.3), -3.5);
+
+// Out-of-range angles wrap (rotation is cyclic) rather than sticking at
+// the endpoint, and every result lands inside [-180, 180].
+assert.equal(normalizeRotation(181), -179);
+assert.equal(normalizeRotation(-181), 179);
+assert.equal(normalizeRotation(360), 0);
+assert.equal(normalizeRotation(-360), 0);
+// 540 == 360 + 180, i.e. the half-turn orientation. It folds onto the
+// -180 endpoint rather than +180; the two are the same picture.
+assert.equal(normalizeRotation(540), -180);
+assert.equal(normalizeRotation(720), 0);
+for (const angle of [181, -181, 360, -360, 540, 999, -999, 1234.7]) {
+  const result = normalizeRotation(angle);
+  assert.ok(result >= ROTATE_MIN && result <= ROTATE_MAX, `${angle} wrapped to out-of-range ${result}`);
+}
+
+// Non-finite input degrades to level, never NaN (a NaN would produce
+// "rotate(NaNdeg)" and silently break the transform entirely).
+for (const bad of ["nope", NaN, Infinity, -Infinity, {}, [], null, undefined]) {
+  const result = normalizeRotation(bad);
+  assert.ok(Number.isFinite(result), `normalizeRotation(${String(bad)}) produced non-finite ${result}`);
+}
 assert.equal(normalizeRotation("nope"), 0);
+assert.equal(normalizeRotation(Infinity), 0);
+
+// No negative zero leaking into readouts or storage.
+assert.ok(!Object.is(normalizeRotation(-0), -0));
+assert.ok(!Object.is(normalizeRotation(-0.1), -0));
+
+// Every quick preset must itself be a valid, exactly-representable angle.
+for (const preset of ANGLE_PRESETS) {
+  assert.equal(normalizeRotation(preset), preset, `preset ${preset} is not stable`);
+}
+
+// ---------- rotation preference resolution (the `0 || default` trap) ----------
+
+// null / never-customized => subtle default tilt.
+assert.equal(resolveRotationPreference(null), DEFAULT_ROTATION);
+assert.equal(resolveRotationPreference(undefined), DEFAULT_ROTATION);
+// A deliberate 0 means "Level" and must survive exactly — this is the
+// case that `prefs.windowRotation || DEFAULT_ROTATION` would silently
+// convert back into a tilt.
+assert.equal(resolveRotationPreference(0), 0);
+assert.ok(!Object.is(resolveRotationPreference(0), DEFAULT_ROTATION));
+// Explicit angles round-trip untouched.
+assert.equal(resolveRotationPreference(-3), -3);
+assert.equal(resolveRotationPreference(17), 17);
+assert.equal(resolveRotationPreference(12.5), 12.5);
+assert.equal(resolveRotationPreference(-137), -137);
+assert.equal(resolveRotationPreference(180), 180);
+// Stored-as-string (older/corrupted writes) still resolve numerically.
+assert.equal(resolveRotationPreference("0"), 0);
+assert.equal(resolveRotationPreference("17"), 17);
+// Corrupted values fall back to the default tilt, never NaN.
+for (const bad of ["", "abc", {}, [], NaN, Infinity]) {
+  const result = resolveRotationPreference(bad);
+  assert.ok(Number.isFinite(result), `resolveRotationPreference(${String(bad)}) => ${result}`);
+}
+assert.equal(resolveRotationPreference("abc"), DEFAULT_ROTATION);
+
+// ---------- angle formatting ----------
+
+assert.equal(formatAngle(0), "0°");
+assert.equal(formatAngle(-3), "-3°");
+assert.equal(formatAngle(17), "17°");
+assert.equal(formatAngle(12.5), "12.5°");
+assert.equal(formatAngle(-0.5), "-0.5°");
+assert.equal(formatAngle(180), "180°");
 
 // ---------- clampWindowGeometry ----------
 
@@ -388,6 +525,61 @@ assert.ok(Math.abs(computeFitScale(400, 300, 200, 300) - 0.5) < 1e-9);
   assert.equal(r.height, 200);
 }
 
+// ---------- viewport fitting across the full rotation range ----------
+
+// A steep angle inflates the footprint far more than a shallow one, so
+// every angle in the supported range must still resolve to a size that
+// respects the minimums and never produces NaN/negative dimensions.
+for (const angle of [0, 3, 15, 45, 75, 90, 120, 135, 180, -45, -90, -137]) {
+  const r = fitSizeToViewport(600, 500, angle, 1000, 700);
+  assert.ok(Number.isFinite(r.width) && Number.isFinite(r.height), `non-finite fit at ${angle}deg`);
+  assert.ok(r.width >= MIN_WIDTH, `fit dropped below MIN_WIDTH at ${angle}deg (${r.width})`);
+  assert.ok(r.height >= MIN_HEIGHT, `fit dropped below MIN_HEIGHT at ${angle}deg (${r.height})`);
+  assert.ok(r.width <= 600 && r.height <= 500, `fit enlarged the panel at ${angle}deg`);
+}
+
+// Fitting must be idempotent: feeding a fitted size back in must not
+// shrink it further. This is what stops a slider sweep from ratcheting
+// the panel down toward its minimum.
+for (const angle of [0, 45, 90, 135, 180]) {
+  const once = fitSizeToViewport(600, 500, angle, 900, 650);
+  const twice = fitSizeToViewport(once.width, once.height, angle, 900, 650);
+  assert.ok(Math.abs(once.width - twice.width) < 1e-6, `fit not idempotent (width) at ${angle}deg`);
+  assert.ok(Math.abs(once.height - twice.height) < 1e-6, `fit not idempotent (height) at ${angle}deg`);
+}
+
+{
+  // 90deg specifically: the bounding box axes swap, so a panel that is
+  // far taller than the viewport is wide must be shrunk on the axis that
+  // is now the constraint.
+  const angle = 90;
+  const r = fitSizeToViewport(500, 900, angle, 1000, 600);
+  const box = rotatedBoundingBox(r.width, r.height, angle);
+  assert.ok(box.width <= 1000 + 1e-6, `90deg footprint too wide: ${box.width}`);
+  assert.ok(r.width >= MIN_WIDTH && r.height >= MIN_HEIGHT);
+}
+
+// clampWindowGeometry must also stay sane across the range, keeping the
+// panel's origin inside the viewport at every angle.
+for (const angle of [0, 45, 90, 135, 180, -45, -90]) {
+  const result = clampWindowGeometry(
+    { x: 5000, y: 5000, width: 600, height: 500, rotation: angle },
+    1200,
+    800
+  );
+  assert.equal(result.rotation, angle, `clampWindowGeometry altered the angle at ${angle}deg`);
+  assert.ok(result.x >= 0 && result.y >= 0, `negative origin at ${angle}deg`);
+  assert.ok(result.x <= 1200 && result.y <= 800, `origin pushed off-screen at ${angle}deg`);
+  assert.ok(Number.isFinite(result.width) && Number.isFinite(result.height));
+}
+
+{
+  // An arbitrary (non-preset) angle must survive the geometry pipeline
+  // unchanged rather than being snapped to a preset step.
+  const result = clampWindowGeometry({ x: 100, y: 100, width: 500, height: 400, rotation: 17.5 }, 1400, 900);
+  assert.equal(result.rotation, 17.5);
+}
+
 // ---------- storage failure safety ----------
 // getPrefs()/setPrefs() must never throw or hang the caller, regardless of
 // how chrome.storage.sync misbehaves — dragging/resizing/rotating/
@@ -400,6 +592,39 @@ assert.ok(Math.abs(computeFitScale(400, 300, 200, 300) - 0.5) < 1e-9);
   const prefs = await getPrefs();
   assert.equal(prefs.windowAccent, "default", "sanity check: normal mode returns real defaults");
 }
+
+// ---------- rotation persistence round-trip through real getPrefs ----------
+// Guards the full storage contract, not just the resolver in isolation.
+{
+  storageMode = "normal";
+  delete storageData.windowRotation;
+  const prefs = await getPrefs();
+  assert.equal(prefs.windowRotation, null, "an untouched rotation must read back as null, not 0");
+  assert.equal(resolveRotationPreference(prefs.windowRotation), DEFAULT_ROTATION,
+    "a never-customized rotation must display the default tilt");
+}
+{
+  // The critical case: the user deliberately levelled the panel.
+  await setPrefs({ windowRotation: 0 });
+  const prefs = await getPrefs();
+  assert.equal(prefs.windowRotation, 0);
+  assert.equal(resolveRotationPreference(prefs.windowRotation), 0,
+    "a deliberate 0 must stay level, not silently revert to the default tilt");
+}
+for (const angle of [-3, 17, 12.5, -137, 180]) {
+  await setPrefs({ windowRotation: angle });
+  const prefs = await getPrefs();
+  assert.equal(resolveRotationPreference(prefs.windowRotation), angle, `${angle} did not round-trip`);
+}
+{
+  // Reset clears rotation back to "never customized" rather than writing
+  // a literal -3, so the panel picks up the default tilt again.
+  await setPrefs({ windowRotation: null });
+  const prefs = await getPrefs();
+  assert.equal(prefs.windowRotation, null);
+  assert.equal(resolveRotationPreference(prefs.windowRotation), DEFAULT_ROTATION);
+}
+delete storageData.windowRotation;
 {
   storageMode = "error";
   const prefs = await getPrefs();

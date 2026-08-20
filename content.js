@@ -17,15 +17,6 @@
   let speechRequestId = 0;
   let preservePanelUntil = 0;
 
-  // ---------- floating window customization state ----------
-  // (position/size/rotation/accent/shape — layered on top of the existing
-  // selection popup without touching translation, OCR, or audio logic)
-  let currentRotation = 0;
-  let currentAccent = "default";
-  let currentShape = "classic";
-  let lastAnchorRect = null; // selection rect the panel last anchored to, used by "reset window"
-  let viewportResizeTimer = null;
-
   // Must stay large enough that the header's icon + title + language
   // toggle + 6 action buttons never overflow the panel (measured via real
   // browser QA: the header needs ~363px of content width at this font
@@ -34,10 +25,38 @@
   const MIN_WIDTH = 380;
   const MIN_HEIGHT = 160;
   const MAX_LOCAL_DIMENSION = 900;
-  const ROTATE_STEP = 5;
-  const ROTATE_MAX = 45;
+
+  // Rotation. The panel ships very slightly tilted so it reads as a
+  // physical card resting on the page rather than a flat browser box.
+  // DEFAULT_ROTATION is only what an *uncustomized* panel shows — the
+  // user can set any angle in [ROTATE_MIN, ROTATE_MAX], including a
+  // deliberate 0 ("Level"), which is stored and honoured as a real choice.
+  const DEFAULT_ROTATION = -3;
+  const ROTATE_MIN = -180;
+  const ROTATE_MAX = 180;
+  const ROTATE_PRECISION = 0.5; // smallest representable angle increment
+  const ROTATE_FINE_STEP = 1;
+  const ROTATE_SHIFT_STEP = 5;
   const ANGLE_PRESETS = [-45, -30, -15, -10, -5, 0, 5, 10, 15, 30, 45];
   const SHAPE_KEYS = ["classic", "soft", "compact", "square", "bubble"];
+
+  // ---------- floating window customization state ----------
+  // (position/size/rotation/accent/shape — layered on top of the existing
+  // selection popup without touching translation, OCR, or audio logic)
+  // Declared after the constants above so the initial rotation can use
+  // DEFAULT_ROTATION without hitting its temporal dead zone.
+  let currentRotation = DEFAULT_ROTATION;
+  let currentAccent = "default";
+  let currentShape = "classic";
+  let lastAnchorRect = null; // selection rect the panel last anchored to, used by "reset window"
+  let viewportResizeTimer = null;
+  // The size the user actually asked for, kept separate from the rendered
+  // size. Rotation can force a temporary shrink to keep the panel on
+  // screen; without remembering the intent, rotating out and back would
+  // ratchet the panel down to its minimum and never recover. null = "no
+  // explicit size", i.e. let the panel-size CSS class / content decide.
+  let desiredWidth = null;
+  let desiredHeight = null;
   // Every light/dark pair is verified (tests/floating-window.mjs) to give
   // white header text >=4.5:1 WCAG AA contrast against BOTH stops. blue,
   // cyan, green, and orange are darkened slightly from their first pass,
@@ -240,10 +259,48 @@
     return SHAPE_KEYS.includes(value) ? value : "classic";
   }
 
+  // Sanitizes any numeric angle into the supported range. Angles wrap
+  // rather than clamp, because rotation is genuinely cyclic: 360 is the
+  // same orientation as 0, and nudging past +180 should continue round to
+  // -179 instead of sticking. The exact endpoints -180 and 180 are both
+  // selectable on the slider and visually identical, so each is preserved
+  // as given rather than folded into the other. Non-finite input falls
+  // back to 0 (level) — the neutral angle, not the default tilt, which is
+  // resolveRotationPreference()'s job.
   function normalizeRotation(value) {
     const num = Number(value);
     if (!Number.isFinite(num)) return 0;
-    return clampNumber(Math.round(num), -ROTATE_MAX, ROTATE_MAX);
+    const stepped = Math.round(num / ROTATE_PRECISION) * ROTATE_PRECISION;
+    if (stepped >= ROTATE_MIN && stepped <= ROTATE_MAX) return normalizeZero(stepped);
+    // Out of range: fold into [-180, 180). The two endpoints render
+    // identically, so which one an out-of-range angle lands on is
+    // cosmetic — 540 becoming -180 rather than 180 is the same picture.
+    const wrapped = (((stepped + 180) % 360) + 360) % 360 - 180;
+    return normalizeZero(Math.round(wrapped / ROTATE_PRECISION) * ROTATE_PRECISION);
+  }
+
+  // Keeps -0 from leaking into readouts and stored preferences.
+  function normalizeZero(value) {
+    return value === 0 ? 0 : value;
+  }
+
+  // Distinguishes "never customized" from a deliberate angle. null (or a
+  // corrupted value) means the user has never touched rotation, so the
+  // subtle default tilt applies; a stored number — crucially including
+  // 0 — is an explicit choice and is honoured exactly. This is why the
+  // codebase must never use `prefs.windowRotation || DEFAULT_ROTATION`,
+  // which would silently turn a deliberate "Level" back into a tilt.
+  function resolveRotationPreference(stored) {
+    if (stored === null || stored === undefined || stored === "") return DEFAULT_ROTATION;
+    const num = Number(stored);
+    if (!Number.isFinite(num)) return DEFAULT_ROTATION;
+    return normalizeRotation(num);
+  }
+
+  // "-3°", "0°", "12.5°" — integers stay integral, halves show one decimal.
+  function formatAngle(value) {
+    const num = normalizeRotation(value);
+    return `${Number.isInteger(num) ? num : num.toFixed(1)}°`;
   }
 
   // Sanitizes a saved/restored geometry so a window position or size saved
@@ -338,9 +395,16 @@
 
     const prefs = await getPrefs();
     currentSourceLang = prefs.sourceLang;
-    currentRotation = normalizeRotation(prefs.windowRotation);
+    // null/absent => never customized => subtle default tilt. A stored
+    // number (including a deliberate 0) is used exactly as saved.
+    currentRotation = resolveRotationPreference(prefs.windowRotation);
     currentAccent = normalizeAccent(prefs.windowAccent);
     currentShape = normalizeWindowStyle(prefs.windowStyle);
+    // Remember the saved size as the user's intent, not the viewport-fitted
+    // size derived from it, so the panel can grow back to its full size
+    // again on a larger viewport or at a gentler angle.
+    desiredWidth = typeof prefs.windowWidth === "number" ? prefs.windowWidth : null;
+    desiredHeight = typeof prefs.windowHeight === "number" ? prefs.windowHeight : null;
 
     popupEl = document.createElement("div");
     popupEl.className = `mhl-lens mhl-theme-${prefs.theme} mhl-size-${prefs.panelSize} mhl-shape-${currentShape}`;
@@ -426,6 +490,11 @@
       <div class="mhl-resize-s" id="mhl-resize-s"></div>
       <div class="mhl-resize-se" id="mhl-resize-se"></div>
 
+      <div class="mhl-rotate-handle" id="mhl-rotate-handle" role="slider"
+        aria-label="Rotate window by dragging"
+        aria-valuemin="${ROTATE_MIN}" aria-valuemax="${ROTATE_MAX}" aria-valuenow="${currentRotation}"
+        title="Drag to rotate">↻</div>
+
       <div class="mhl-translate-bar">
         <span>Translate to</span>
         <span class="mhl-arrow">→</span>
@@ -481,12 +550,55 @@
           <div class="mhl-shape-grid">${shapeOptions}</div>
         </div>
         <div class="mhl-appearance-section">
-          <p class="mhl-appearance-label">Rotation</p>
-          <div class="mhl-rotate-row">
-            <button type="button" id="mhl-rotate-left" title="rotate left">⟲</button>
-            <span class="mhl-rotate-readout" id="mhl-rotate-readout">0°</span>
-            <button type="button" id="mhl-rotate-right" title="rotate right">⟳</button>
+          <div class="mhl-rotate-head">
+            <p class="mhl-appearance-label" id="mhl-rotate-label">Rotation</p>
+            <span class="mhl-rotate-readout" id="mhl-rotate-readout">${formatAngle(currentRotation)}</span>
           </div>
+
+          <input
+            type="range"
+            class="mhl-rotate-slider"
+            id="mhl-rotate-slider"
+            min="${ROTATE_MIN}"
+            max="${ROTATE_MAX}"
+            step="${ROTATE_PRECISION}"
+            value="${currentRotation}"
+            aria-labelledby="mhl-rotate-label"
+            aria-label="Rotation angle in degrees"
+            title="Drag to rotate the window"
+          />
+          <div class="mhl-rotate-scale"><span>${ROTATE_MIN}°</span><span>+${ROTATE_MAX}°</span></div>
+
+          <div class="mhl-rotate-row">
+            <button type="button" class="mhl-rotate-step" id="mhl-rotate-left"
+              title="Rotate left 1 degree (hold Shift for ${ROTATE_SHIFT_STEP}°)"
+              aria-label="Rotate left 1 degree">−1°</button>
+            <button type="button" class="mhl-rotate-action" id="mhl-rotate-level"
+              title="Set rotation to level (0°)" aria-label="Set rotation to level">Level</button>
+            <button type="button" class="mhl-rotate-action" id="mhl-rotate-default"
+              title="Restore the default tilt (${formatAngle(DEFAULT_ROTATION)})"
+              aria-label="Restore default tilt">Default</button>
+            <button type="button" class="mhl-rotate-step" id="mhl-rotate-right"
+              title="Rotate right 1 degree (hold Shift for ${ROTATE_SHIFT_STEP}°)"
+              aria-label="Rotate right 1 degree">+1°</button>
+          </div>
+
+          <div class="mhl-rotate-exact">
+            <label for="mhl-rotate-input">Angle</label>
+            <input
+              type="number"
+              class="mhl-rotate-input"
+              id="mhl-rotate-input"
+              min="${ROTATE_MIN}"
+              max="${ROTATE_MAX}"
+              step="${ROTATE_PRECISION}"
+              value="${currentRotation}"
+              aria-label="Exact rotation angle in degrees"
+            />
+            <span class="mhl-rotate-unit">°</span>
+          </div>
+
+          <p class="mhl-appearance-sublabel">Quick angles</p>
           <div class="mhl-angle-chip-row">${angleChips}</div>
         </div>
         <div class="mhl-appearance-section">
@@ -531,9 +643,12 @@
       popupEl.classList.remove(...sizes.map((size) => `mhl-size-${size}`));
       popupEl.classList.add(`mhl-size-${prefs.panelSize}`);
       // A manually resized width would otherwise silently override this
-      // preset cycle (inline style beats the class). Clear it so the old
-      // button keeps doing exactly what it always did.
+      // preset cycle (inline style beats the class). Clear it — including
+      // the remembered resize intent, which keepPanelOnScreen() would
+      // otherwise re-apply — so the old button keeps doing exactly what it
+      // always did.
       popupEl.style.width = "";
+      desiredWidth = null;
       prefs.windowWidth = null;
       keepPanelOnScreen();
       updateAppearanceActiveStates();
@@ -628,7 +743,7 @@
     // simply larger than the viewport (a modest rotation inflates the
     // bounding box well past the element's own width/height) — no position
     // exists where such a box fits, so its size has to shrink first.
-    shrinkToFitViewport(margin);
+    applySizeForCurrentRotation(margin);
     const width = popupEl.offsetWidth;
     const height = popupEl.offsetHeight;
     const box = rotatedBoundingBox(width, height, currentRotation);
@@ -643,19 +758,39 @@
     popupEl.style.top = `${scrollY + top}px`;
   }
 
-  // Uniformly scales the panel down (preserving its aspect ratio, never
-  // below the sensible minimums) just enough that its current rotated
-  // bounding box fits within the viewport. A no-op when it already fits.
-  function shrinkToFitViewport(margin) {
+  // Re-applies the user's intended size, then shrinks it only as far as
+  // this rotation and viewport actually require.
+  //
+  // Sizing always restarts from desiredWidth/desiredHeight rather than
+  // from whatever is currently rendered. Measuring the rendered size would
+  // compound: rotating to 90deg shrinks the panel, and rotating back would
+  // then fit the *shrunken* size, so sweeping the slider would ratchet the
+  // panel down to its minimum and never grow back. Starting from the
+  // remembered intent makes rotation fully reversible.
+  function applySizeForCurrentRotation(margin) {
     if (!popupEl) return;
+    if (desiredWidth !== null) popupEl.style.width = `${desiredWidth}px`;
+    else popupEl.style.width = ""; // fall back to the panel-size CSS class
+    if (desiredHeight !== null) popupEl.style.height = `${desiredHeight}px`;
+    else popupEl.style.height = ""; // fall back to content height
+
     const width = popupEl.offsetWidth;
     const height = popupEl.offsetHeight;
     const availW = Math.max(MIN_WIDTH, innerWidth - margin * 2);
     const availH = Math.max(MIN_HEIGHT, innerHeight - margin * 2);
     const fitted = fitSizeToViewport(width, height, currentRotation, availW, availH);
-    if (fitted.width === width && fitted.height === height) return;
-    popupEl.style.width = `${fitted.width}px`;
-    popupEl.style.height = `${fitted.height}px`;
+    if (fitted.width !== width) popupEl.style.width = `${fitted.width}px`;
+    if (fitted.height !== height) popupEl.style.height = `${fitted.height}px`;
+  }
+
+  // Records the current rendered size as the user's intent. Called when
+  // the user deliberately sets a size (resize-end), never after a
+  // rotation-driven fit, so a temporary shrink is never mistaken for a
+  // chosen size.
+  function rememberDesiredSize() {
+    if (!popupEl) return;
+    desiredWidth = popupEl.offsetWidth;
+    desiredHeight = popupEl.offsetHeight;
   }
 
   // Positions the panel so its rendered (rotated) top-left lands at a
@@ -732,6 +867,11 @@
         };
         const stop = () => {
           controller.abort();
+          // Capture the size the user just dragged to as the new intent
+          // *before* clamping — keepPanelOnScreen() re-applies the
+          // remembered size, so a stale value here would silently undo
+          // the resize that just happened.
+          rememberDesiredSize();
           keepPanelOnScreen();
           persistGeometry();
           updateAppearanceActiveStates();
@@ -743,24 +883,47 @@
     });
   }
 
+  // Cheap live path: writes only the transform. Used for every frame of a
+  // slider drag or rotation-handle drag, where re-fitting the size on each
+  // frame would thrash layout and make the motion stutter. The size/
+  // position fit runs once when the interaction settles (setRotation).
   function applyRotation(rotation) {
     if (!popupEl) return;
     currentRotation = normalizeRotation(rotation);
     popupEl.style.transform = currentRotation ? `rotate(${currentRotation}deg)` : "";
+    syncRotationControls();
   }
 
-  // Rotating around the panel's own center (the CSS default transform
-  // origin) never moves that center point, so no x/y correction is needed
-  // here — only a re-clamp in case the now-larger rotated box no longer
-  // fits the viewport.
+  // Committing path. Rotating around the panel's own center (the CSS
+  // default transform origin) never moves that center, so no x/y
+  // correction is needed here — only a re-fit in case the now-larger
+  // rotated box no longer fits the viewport.
   function setRotation(rotation) {
     if (!popupEl) return;
     applyRotation(rotation);
     keepPanelOnScreen();
   }
 
-  function rotateBy(step) {
-    setRotation(currentRotation + step);
+  // Mirrors currentRotation into the readout, slider, and numeric field.
+  // The element that originated the change is skipped while it has focus
+  // so typing "1" on the way to "14" is not rewritten under the caret.
+  function syncRotationControls() {
+    const readout = document.getElementById("mhl-rotate-readout");
+    if (readout) readout.textContent = formatAngle(currentRotation);
+
+    const slider = document.getElementById("mhl-rotate-slider");
+    if (slider && Number(slider.value) !== currentRotation) slider.value = String(currentRotation);
+
+    const field = document.getElementById("mhl-rotate-input");
+    if (field && document.activeElement !== field && Number(field.value) !== currentRotation) {
+      field.value = String(currentRotation);
+    }
+
+    popupEl?.querySelectorAll(".mhl-angle-chip[data-angle]").forEach((btn) => {
+      btn.classList.toggle("active", Number(btn.dataset.angle) === currentRotation);
+    });
+
+    document.getElementById("mhl-rotate-handle")?.setAttribute("aria-valuenow", String(currentRotation));
   }
 
   function applyAccent(accent) {
@@ -800,8 +963,13 @@
     const prefs = await getPrefs();
     prefs.windowX = Math.round(rect.left);
     prefs.windowY = Math.round(rect.top);
-    prefs.windowWidth = Math.round(popupEl.offsetWidth);
-    prefs.windowHeight = Math.round(popupEl.offsetHeight);
+    // Persist the size the user ASKED for, never the rendered size. The
+    // rendered size may be a temporary rotation/viewport fit; storing that
+    // would make the shrink permanent — the next rebuild would read it back
+    // as the new intent and the panel would ratchet smaller every time it
+    // passed through a steep angle. null stays null (no explicit size).
+    prefs.windowWidth = desiredWidth === null ? null : Math.round(desiredWidth);
+    prefs.windowHeight = desiredHeight === null ? null : Math.round(desiredHeight);
     if (extra) Object.assign(prefs, extra);
     await setPrefs(prefs);
   }
@@ -819,14 +987,19 @@
     prefs.windowY = null;
     prefs.windowWidth = null;
     prefs.windowHeight = null;
-    prefs.windowRotation = 0;
+    // Cleared back to "never customized" rather than written as a literal
+    // -3, so a future change to DEFAULT_ROTATION reaches reset users too.
+    // Visually the panel still shows the default tilt immediately below.
+    prefs.windowRotation = null;
     prefs.windowAccent = "default";
     prefs.windowStyle = "classic";
     await setPrefs(prefs);
 
+    desiredWidth = null;
+    desiredHeight = null;
     popupEl.style.width = "";
     popupEl.style.height = "";
-    applyRotation(0);
+    applyRotation(DEFAULT_ROTATION);
     applyAccent("default");
     applyWindowStyle("classic");
 
@@ -847,6 +1020,9 @@
       e.stopPropagation();
       document.querySelectorAll(".mhl-dropdown.open").forEach((d) => d.classList.remove("open"));
       panel.classList.toggle("open");
+      // The direct rotation handle only exists while the user is
+      // deliberately customizing, so it never clutters normal reading.
+      popupEl?.classList.toggle("mhl-customizing", panel.classList.contains("open"));
     });
     panel.addEventListener("click", (e) => e.stopPropagation());
     panel.addEventListener("mousedown", (e) => e.stopPropagation());
@@ -878,34 +1054,147 @@
     });
 
     // Rotation can shrink/reposition the panel via keepPanelOnScreen() (see
-    // shrinkToFitViewport), so both geometry and the rotation angle itself
-    // need persisting here — as a single read-modify-write, not two
+    // applySizeForCurrentRotation), so both geometry and the rotation angle
+    // itself need persisting — as a single read-modify-write, not two
     // independent persist calls that could race and clobber each other.
-    document.getElementById("mhl-rotate-left")?.addEventListener("click", async () => {
-      rotateBy(-ROTATE_STEP);
+    const commitRotation = async (angle) => {
+      setRotation(angle);
       updateAppearanceActiveStates();
       await persistGeometry({ windowRotation: currentRotation });
+    };
+
+    // Slider: "input" fires continuously while dragging, so it only moves
+    // the transform (no storage, no layout fit). "change" fires once when
+    // the drag ends or a keyboard adjustment settles — that is where the
+    // panel is re-fitted and the value is written to chrome.storage.
+    const slider = document.getElementById("mhl-rotate-slider");
+    if (slider) {
+      slider.addEventListener("input", () => {
+        applyRotation(Number(slider.value));
+      });
+      slider.addEventListener("change", async () => {
+        await commitRotation(Number(slider.value));
+      });
+    }
+
+    // Exact numeric entry. An empty or half-typed field is allowed to sit
+    // there while the user edits (no rotation change, no persistence, no
+    // NaN reaching the transform); it is only committed once the value
+    // parses, and reverted to the live angle on blur if it never does.
+    const field = document.getElementById("mhl-rotate-input");
+    if (field) {
+      field.addEventListener("input", () => {
+        const raw = field.value.trim();
+        if (raw === "" || raw === "-" || raw === "+") return;
+        const parsed = Number(raw);
+        if (!Number.isFinite(parsed)) return;
+        applyRotation(parsed);
+      });
+      const commitField = async () => {
+        const raw = field.value.trim();
+        const parsed = Number(raw);
+        if (raw === "" || !Number.isFinite(parsed)) {
+          field.value = String(currentRotation); // discard the invalid edit
+          return;
+        }
+        await commitRotation(parsed);
+        field.value = String(currentRotation); // reflect wrapping/rounding
+      };
+      field.addEventListener("change", commitField);
+      field.addEventListener("blur", commitField);
+      field.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitField();
+        }
+      });
+    }
+
+    document.getElementById("mhl-rotate-left")?.addEventListener("click", async (e) => {
+      await commitRotation(currentRotation - (e.shiftKey ? ROTATE_SHIFT_STEP : ROTATE_FINE_STEP));
     });
-    document.getElementById("mhl-rotate-right")?.addEventListener("click", async () => {
-      rotateBy(ROTATE_STEP);
-      updateAppearanceActiveStates();
-      await persistGeometry({ windowRotation: currentRotation });
+    document.getElementById("mhl-rotate-right")?.addEventListener("click", async (e) => {
+      await commitRotation(currentRotation + (e.shiftKey ? ROTATE_SHIFT_STEP : ROTATE_FINE_STEP));
+    });
+    document.getElementById("mhl-rotate-level")?.addEventListener("click", async () => {
+      await commitRotation(0);
+    });
+    document.getElementById("mhl-rotate-default")?.addEventListener("click", async () => {
+      await commitRotation(DEFAULT_ROTATION);
     });
 
     panel.querySelectorAll(".mhl-angle-chip[data-angle]").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        setRotation(Number(btn.dataset.angle));
-        updateAppearanceActiveStates();
-        await persistGeometry({ windowRotation: currentRotation });
+        await commitRotation(Number(btn.dataset.angle));
       });
     });
 
     document.getElementById("mhl-reset-window")?.addEventListener("click", async () => {
       await resetFloatingWindow();
       panel.classList.remove("open");
+      popupEl?.classList.remove("mhl-customizing");
     });
 
+    wireRotationHandle();
+
     updateAppearanceActiveStates();
+  }
+
+  // Direct rotation: grab the handle above the panel and swing it around
+  // the panel's own center, the way a design tool behaves. Only active
+  // while the Appearance popover is open (.mhl-customizing).
+  function wireRotationHandle() {
+    const handle = document.getElementById("mhl-rotate-handle");
+    if (!handle || !popupEl) return;
+
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation(); // never let this reach the header drag
+
+      // A rotation transform about the default origin leaves the element's
+      // center invariant, so the bounding-box center IS the pivot.
+      const rect = popupEl.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const pointerAngle = (e) => (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI;
+
+      // Anchoring to the angle under the pointer at grab time is what
+      // stops the panel snapping to the pointer on the first move.
+      const grabAngle = pointerAngle(event);
+      const startRotation = currentRotation;
+
+      handle.setPointerCapture(event.pointerId);
+      const controller = new AbortController();
+      const { signal } = controller;
+
+      let pending = startRotation;
+      let frameQueued = false;
+      const applyFrame = () => {
+        frameQueued = false;
+        applyRotation(pending); // transform only — no layout fit per frame
+      };
+      const move = (moveEvent) => {
+        pending = startRotation + (pointerAngle(moveEvent) - grabAngle);
+        if (!frameQueued) {
+          frameQueued = true;
+          requestAnimationFrame(applyFrame);
+        }
+      };
+      const stop = async () => {
+        controller.abort();
+        // Same guard the drag/resize gestures use: the fit below can move
+        // the panel out from under the cursor, and the trailing native
+        // mouseup would otherwise read as "clicked away" and close it.
+        preservePanelUntil = Date.now() + 500;
+        setRotation(pending);
+        updateAppearanceActiveStates();
+        await persistGeometry({ windowRotation: currentRotation });
+      };
+      handle.addEventListener("pointermove", move, { signal });
+      handle.addEventListener("pointerup", stop, { signal });
+      handle.addEventListener("pointercancel", stop, { signal });
+    });
   }
 
   function updateAppearanceActiveStates() {
@@ -916,11 +1205,7 @@
     popupEl.querySelectorAll(".mhl-shape-option[data-shape]").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.shape === currentShape);
     });
-    const readout = document.getElementById("mhl-rotate-readout");
-    if (readout) readout.textContent = `${currentRotation}°`;
-    popupEl.querySelectorAll(".mhl-angle-chip[data-angle]").forEach((btn) => {
-      btn.classList.toggle("active", Number(btn.dataset.angle) === currentRotation);
-    });
+    syncRotationControls();
     const sizeReadout = document.getElementById("mhl-size-readout");
     if (sizeReadout) {
       const heightLabel = popupEl.style.height ? Math.round(popupEl.offsetHeight) : "auto";
@@ -962,6 +1247,7 @@
   document.addEventListener("click", () => {
     document.querySelectorAll(".mhl-dropdown.open").forEach((d) => d.classList.remove("open"));
     document.querySelectorAll(".mhl-appearance-panel.open").forEach((p) => p.classList.remove("open"));
+    popupEl?.classList.remove("mhl-customizing");
   });
 
   // Re-clamp (and, after the resize settles, re-persist) the panel whenever
@@ -1038,6 +1324,13 @@
 
     contentEl.innerHTML = html;
 
+    // The panel was positioned while the body still said "Looking that
+    // up…", so it was measured short. Filling in the real results can make
+    // it much taller — tall enough to hang off the bottom of the viewport,
+    // taking the resize handles out of reach with it. Re-fit now that the
+    // final content height is known.
+    keepPanelOnScreen();
+
     contentEl.querySelectorAll(".mhl-speak-word").forEach((el) => {
       el.addEventListener("click", () => speak(el.dataset.word, currentSourceLang));
     });
@@ -1105,7 +1398,11 @@
     windowY: null,
     windowWidth: null,
     windowHeight: null,
-    windowRotation: 0,
+    // null means "rotation was never customized" and resolves to the
+    // subtle DEFAULT_ROTATION tilt. A stored number is an explicit user
+    // choice and is honoured exactly — including 0, which means the user
+    // deliberately levelled the panel. See resolveRotationPreference().
+    windowRotation: null,
     windowAccent: "default",
     windowStyle: "classic"
   };
@@ -1192,12 +1489,18 @@
       normalizeAccent,
       normalizeWindowStyle,
       normalizeRotation,
+      resolveRotationPreference,
+      formatAngle,
       clampWindowGeometry,
       ACCENT_PRESETS,
       SHAPE_KEYS,
       MIN_WIDTH,
       MIN_HEIGHT,
+      ROTATE_MIN,
       ROTATE_MAX,
+      ROTATE_PRECISION,
+      DEFAULT_ROTATION,
+      ANGLE_PRESETS,
       WCAG_AA_NORMAL_TEXT,
       ACCENT_FG_LIGHT,
       ACCENT_FG_DARK,
