@@ -26,22 +26,32 @@
   let lastAnchorRect = null; // selection rect the panel last anchored to, used by "reset window"
   let viewportResizeTimer = null;
 
-  const MIN_WIDTH = 280;
+  // Must stay large enough that the header's icon + title + language
+  // toggle + 6 action buttons never overflow the panel (measured via real
+  // browser QA: the header needs ~363px of content width at this font
+  // size; 380 keeps a small safety margin). Keep in sync with the CSS
+  // min-width on .mhl-lens.
+  const MIN_WIDTH = 380;
   const MIN_HEIGHT = 160;
   const MAX_LOCAL_DIMENSION = 900;
   const ROTATE_STEP = 5;
   const ROTATE_MAX = 45;
   const ANGLE_PRESETS = [-45, -30, -15, -10, -5, 0, 5, 10, 15, 30, 45];
   const SHAPE_KEYS = ["classic", "soft", "compact", "square", "bubble"];
+  // Every light/dark pair is verified (tests/floating-window.mjs) to give
+  // white header text >=4.5:1 WCAG AA contrast against BOTH stops. blue,
+  // cyan, green, and orange are darkened slightly from their first pass,
+  // which measured true WCAG contrast (not perceived-brightness) as low as
+  // 3.84:1 on the light stop.
   const ACCENT_PRESETS = {
     default: { light: "#2E5E99", dark: "#0D2440" },
     neutral: { light: "#5C6B7A", dark: "#232B33" },
     pink: { light: "#A94A6E", dark: "#4A1930" },
     purple: { light: "#7B5EA7", dark: "#2E1F4A" },
-    blue: { light: "#2F80D6", dark: "#123A66" },
-    cyan: { light: "#1E8F99", dark: "#0B343A" },
-    green: { light: "#3D8556", dark: "#12351F" },
-    orange: { light: "#B8631F", dark: "#4A2408" },
+    blue: { light: "#2568A8", dark: "#123A66" },
+    cyan: { light: "#1A7A82", dark: "#0B343A" },
+    green: { light: "#37784D", dark: "#12351F" },
+    orange: { light: "#A6591C", dark: "#4A2408" },
     red: { light: "#A6432F", dark: "#4A180F" }
   };
 
@@ -77,6 +87,54 @@
     return { width: width * cos + height * sin, height: width * sin + height * cos };
   }
 
+  // Largest uniform scale (capped at 1, i.e. never enlarges) that fits a
+  // box of the given size within the available space on both axes.
+  function computeFitScale(boxWidth, boxHeight, availWidth, availHeight) {
+    return Math.min(1, availWidth / boxWidth, availHeight / boxHeight);
+  }
+
+  // Shrinks (width, height) just enough that its rotated bounding box fits
+  // within the available space, never going below MIN_WIDTH/MIN_HEIGHT. A
+  // uniform scale handles the common case; if that would push either
+  // dimension below its own floor (e.g. a very tall saved height at a wide
+  // minimum width and a steep rotation on a short viewport), that
+  // dimension is pinned at its minimum and the other is re-solved directly
+  // against the fit constraints, since a floored dimension can no longer
+  // shrink in step with the other one.
+  function fitSizeToViewport(width, height, rotationDeg, availWidth, availHeight) {
+    const box = rotatedBoundingBox(width, height, rotationDeg);
+    if (box.width <= availWidth && box.height <= availHeight) {
+      return { width, height };
+    }
+
+    const scale = computeFitScale(box.width, box.height, availWidth, availHeight);
+    let w = width * scale;
+    let h = height * scale;
+
+    const rad = (rotationDeg * Math.PI) / 180;
+    const cos = Math.max(Math.abs(Math.cos(rad)), 0.0001);
+    const sin = Math.abs(Math.sin(rad));
+
+    if (w < MIN_WIDTH) {
+      w = MIN_WIDTH;
+      h = Math.min(
+        (availHeight - sin * w) / cos,
+        sin > 0.0001 ? (availWidth - cos * w) / sin : height
+      );
+    } else if (h < MIN_HEIGHT) {
+      h = MIN_HEIGHT;
+      w = Math.min(
+        (availWidth - sin * h) / cos,
+        sin > 0.0001 ? (availHeight - cos * h) / sin : width
+      );
+    }
+
+    return {
+      width: clampNumber(w, MIN_WIDTH, width),
+      height: clampNumber(h, MIN_HEIGHT, height)
+    };
+  }
+
   function hexToRgb(hex) {
     const clean = String(hex).replace("#", "");
     const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
@@ -98,9 +156,74 @@
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
-  function perceivedBrightness(hex) {
+  // WCAG relative luminance / contrast ratio (standard sRGB conversion).
+  function srgbChannelToLinear(channel) {
+    const v = channel / 255;
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  }
+
+  function relativeLuminance(hex) {
     const { r, g, b } = hexToRgb(hex);
-    return 0.299 * r + 0.587 * g + 0.114 * b;
+    return (
+      0.2126 * srgbChannelToLinear(r) +
+      0.7152 * srgbChannelToLinear(g) +
+      0.0722 * srgbChannelToLinear(b)
+    );
+  }
+
+  function contrastRatio(hexA, hexB) {
+    const l1 = relativeLuminance(hexA);
+    const l2 = relativeLuminance(hexB);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  const ACCENT_FG_LIGHT = "#F5F9FF";
+  const ACCENT_FG_DARK = "#0D2440";
+  const WCAG_AA_NORMAL_TEXT = 4.5;
+
+  // Header text can sit over either end of the accent gradient, so contrast
+  // is checked against both stops and the worse of the two is what counts.
+  function worstCaseContrast(fg, stopA, stopB) {
+    return Math.min(contrastRatio(fg, stopA), contrastRatio(fg, stopB));
+  }
+
+  // Picks whichever foreground actually meets WCAG AA (4.5:1) against both
+  // gradient stops, preferring the standard light text; for a pathological
+  // custom color where neither foreground reaches 4.5:1, falls back to
+  // whichever gives the better (closest-to-compliant) ratio.
+  function pickAccentForeground(light, dark) {
+    const lightFgContrast = worstCaseContrast(ACCENT_FG_LIGHT, light, dark);
+    const darkFgContrast = worstCaseContrast(ACCENT_FG_DARK, light, dark);
+    if (lightFgContrast >= WCAG_AA_NORMAL_TEXT) return ACCENT_FG_LIGHT;
+    if (darkFgContrast >= WCAG_AA_NORMAL_TEXT) return ACCENT_FG_DARK;
+    return lightFgContrast >= darkFgContrast ? ACCENT_FG_LIGHT : ACCENT_FG_DARK;
+  }
+
+  // A single foreground color cannot pass WCAG AA against both a near-white
+  // and a near-black gradient stop at once (that's not a tuning problem —
+  // contrast against a bright stop and contrast against a dark stop pull in
+  // opposite directions). The curated presets are pre-verified to stay in a
+  // range where white text works against both stops; a raw custom pick
+  // (e.g. pure white, bright yellow) isn't, so it's darkened just enough
+  // here — via binary search on a linear scale factor — before it's used
+  // as the light gradient stop or to derive the dark one.
+  function ensureLegibleAsBackground(hex, fg) {
+    if (contrastRatio(fg, hex) >= WCAG_AA_NORMAL_TEXT) return hex;
+    const { r, g, b } = hexToRgb(hex);
+    let lo = 0; // factor 0 (black) always passes against any non-near-black fg
+    let hi = 1; // factor 1 (original color) is known to fail here
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      const candidate = rgbToHex(r * mid, g * mid, b * mid);
+      if (contrastRatio(fg, candidate) >= WCAG_AA_NORMAL_TEXT) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    return rgbToHex(r * lo, g * lo, b * lo);
   }
 
   function isValidHexColor(value) {
@@ -128,19 +251,23 @@
   function clampWindowGeometry({ x, y, width, height, rotation }, viewportWidth, viewportHeight) {
     const margin = 8;
     const safeRotation = normalizeRotation(rotation);
-    const safeWidth = typeof width === "number"
-      ? clampNumber(width, MIN_WIDTH, Math.max(MIN_WIDTH, viewportWidth - margin * 2))
-      : null;
-    const safeHeight = typeof height === "number"
-      ? clampNumber(height, MIN_HEIGHT, Math.max(MIN_HEIGHT, viewportHeight - margin * 2))
-      : null;
+    const availW = Math.max(MIN_WIDTH, viewportWidth - margin * 2);
+    const availH = Math.max(MIN_HEIGHT, viewportHeight - margin * 2);
+    let safeWidth = typeof width === "number" ? clampNumber(width, MIN_WIDTH, availW) : null;
+    let safeHeight = typeof height === "number" ? clampNumber(height, MIN_HEIGHT, availH) : null;
 
     let safeX = typeof x === "number" ? x : null;
     let safeY = typeof y === "number" ? y : null;
     if (safeX !== null && safeY !== null && safeWidth !== null && safeHeight !== null) {
-      const box = rotatedBoundingBox(safeWidth, safeHeight, safeRotation);
-      const maxX = Math.max(margin, viewportWidth - box.width - margin);
-      const maxY = Math.max(margin, viewportHeight - box.height - margin);
+      // A rotated footprint can exceed the viewport even when its own
+      // width/height individually fit (e.g. a tall panel rotated 10deg on a
+      // short viewport) — no position could make that fit, so shrink first.
+      const fitted = fitSizeToViewport(safeWidth, safeHeight, safeRotation, availW, availH);
+      safeWidth = fitted.width;
+      safeHeight = fitted.height;
+      const finalBox = rotatedBoundingBox(safeWidth, safeHeight, safeRotation);
+      const maxX = Math.max(margin, viewportWidth - finalBox.width - margin);
+      const maxY = Math.max(margin, viewportHeight - finalBox.height - margin);
       safeX = clampNumber(safeX, margin, maxX);
       safeY = clampNumber(safeY, margin, maxY);
     }
@@ -222,14 +349,23 @@
 
     applyAccent(currentAccent);
     applyRotation(currentRotation);
-    if (typeof prefs.windowWidth === "number") popupEl.style.width = `${prefs.windowWidth}px`;
-    if (typeof prefs.windowHeight === "number") popupEl.style.height = `${prefs.windowHeight}px`;
 
-    if (typeof prefs.windowX === "number" && typeof prefs.windowY === "number") {
+    // Validate the restored geometry against *this* viewport before
+    // applying it — e.g. a position/size saved on a larger monitor must
+    // come back on-screen here, not get applied raw and then visibly jump.
+    const restored = clampWindowGeometry(
+      { x: prefs.windowX, y: prefs.windowY, width: prefs.windowWidth, height: prefs.windowHeight, rotation: currentRotation },
+      innerWidth,
+      innerHeight
+    );
+    if (restored.width != null) popupEl.style.width = `${restored.width}px`;
+    if (restored.height != null) popupEl.style.height = `${restored.height}px`;
+
+    if (restored.x != null && restored.y != null) {
       // The user has moved the panel before — restore it as a persistent
       // utility window instead of re-anchoring next to this new selection.
       lastAnchorRect = null;
-      positionAtViewportPoint(prefs.windowX, prefs.windowY);
+      positionAtViewportPoint(restored.x, restored.y);
     } else {
       lastAnchorRect = rect;
       popupEl.style.left = `${window.scrollX + rect.left}px`;
@@ -434,6 +570,13 @@
       const startTop = popupEl.offsetTop;
       header.setPointerCapture(event.pointerId);
 
+      // Only one of pointerup/pointercancel ever fires per gesture, so a
+      // plain {once:true} pair leaks one dead listener onto the header
+      // every time the user drags again. An AbortController lets whichever
+      // terminal event fires first remove all three listeners atomically.
+      const controller = new AbortController();
+      const { signal } = controller;
+
       // Pointermove can fire far faster than the display refreshes on
       // high-poll-rate mice. Coalesce updates to one DOM write per frame so
       // dragging stays smooth without redundant layout/paint work.
@@ -454,14 +597,23 @@
         }
       };
       const stop = () => {
-        header.removeEventListener("pointermove", move);
+        controller.abort();
+        // keepPanelOnScreen() can clamp/reposition the panel out from under
+        // the cursor (e.g. a drag that ends past a viewport edge). The
+        // native "mouseup" that follows this pointerup would then land
+        // outside the (now-moved) popup, and handleSelectionChange would
+        // read that as "clicked away with no selection" and close the
+        // panel right after the user moved it. Extend the same
+        // preserve-panel window already used during speech playback so
+        // that stray event is ignored.
+        preservePanelUntil = Date.now() + 500;
         keepPanelOnScreen();
         persistGeometry();
         updateAppearanceActiveStates();
       };
-      header.addEventListener("pointermove", move);
-      header.addEventListener("pointerup", stop, { once: true });
-      header.addEventListener("pointercancel", stop, { once: true });
+      header.addEventListener("pointermove", move, { signal });
+      header.addEventListener("pointerup", stop, { signal });
+      header.addEventListener("pointercancel", stop, { signal });
     });
   }
 
@@ -472,18 +624,38 @@
   function keepPanelOnScreen() {
     if (!popupEl) return;
     const margin = 8;
+    // Repositioning alone can't help if the panel's *rotated* footprint is
+    // simply larger than the viewport (a modest rotation inflates the
+    // bounding box well past the element's own width/height) — no position
+    // exists where such a box fits, so its size has to shrink first.
+    shrinkToFitViewport(margin);
     const width = popupEl.offsetWidth;
     const height = popupEl.offsetHeight;
     const box = rotatedBoundingBox(width, height, currentRotation);
     const rect = popupEl.getBoundingClientRect();
     const maxAabbLeft = Math.max(margin, innerWidth - box.width - margin);
-    const maxAabbTop = Math.max(margin, innerHeight - Math.min(box.height, innerHeight - 16) - margin);
+    const maxAabbTop = Math.max(margin, innerHeight - box.height - margin);
     const aabbLeft = clampNumber(rect.left, margin, maxAabbLeft);
     const aabbTop = clampNumber(rect.top, margin, maxAabbTop);
     const left = aabbLeft + (box.width - width) / 2;
     const top = aabbTop + (box.height - height) / 2;
     popupEl.style.left = `${scrollX + left}px`;
     popupEl.style.top = `${scrollY + top}px`;
+  }
+
+  // Uniformly scales the panel down (preserving its aspect ratio, never
+  // below the sensible minimums) just enough that its current rotated
+  // bounding box fits within the viewport. A no-op when it already fits.
+  function shrinkToFitViewport(margin) {
+    if (!popupEl) return;
+    const width = popupEl.offsetWidth;
+    const height = popupEl.offsetHeight;
+    const availW = Math.max(MIN_WIDTH, innerWidth - margin * 2);
+    const availH = Math.max(MIN_HEIGHT, innerHeight - margin * 2);
+    const fitted = fitSizeToViewport(width, height, currentRotation, availW, availH);
+    if (fitted.width === width && fitted.height === height) return;
+    popupEl.style.width = `${fitted.width}px`;
+    popupEl.style.height = `${fitted.height}px`;
   }
 
   // Positions the panel so its rendered (rotated) top-left lands at a
@@ -534,6 +706,11 @@
 
         el.setPointerCapture(event.pointerId);
 
+        // See wireDragging() for why this needs an AbortController rather
+        // than a plain {once:true} pointerup/pointercancel pair.
+        const controller = new AbortController();
+        const { signal } = controller;
+
         let pendingWidth = startWidth;
         let pendingHeight = startHeight;
         let frameQueued = false;
@@ -554,14 +731,14 @@
           }
         };
         const stop = () => {
-          el.removeEventListener("pointermove", move);
+          controller.abort();
           keepPanelOnScreen();
           persistGeometry();
           updateAppearanceActiveStates();
         };
-        el.addEventListener("pointermove", move);
-        el.addEventListener("pointerup", stop, { once: true });
-        el.addEventListener("pointercancel", stop, { once: true });
+        el.addEventListener("pointermove", move, { signal });
+        el.addEventListener("pointerup", stop, { signal });
+        el.addEventListener("pointercancel", stop, { signal });
       });
     });
   }
@@ -590,12 +767,16 @@
     if (!popupEl) return;
     currentAccent = normalizeAccent(accent);
     const preset = ACCENT_PRESETS[currentAccent];
-    const light = preset ? preset.light : currentAccent;
-    const dark = preset ? preset.dark : darkenHex(currentAccent, 0.42);
+    // Presets are pre-curated and verified for contrast (tests/floating-window.mjs)
+    // and used as-is. A custom pick isn't curated, so it's clamped to a
+    // legible brightness first — the persisted currentAccent keeps the
+    // user's original choice; only the *displayed* gradient is adjusted.
+    const light = preset ? preset.light : ensureLegibleAsBackground(currentAccent, ACCENT_FG_LIGHT);
+    const dark = preset ? preset.dark : darkenHex(light, 0.42);
     popupEl.style.setProperty("--mhl-accent-light", light);
     popupEl.style.setProperty("--mhl-accent-dark", dark);
     popupEl.style.setProperty("--mhl-accent-soft", hexToRgba(light, 0.14));
-    popupEl.style.setProperty("--mhl-accent-fg", perceivedBrightness(light) > 170 ? "#0D2440" : "#F5F9FF");
+    popupEl.style.setProperty("--mhl-accent-fg", pickAccentForeground(light, dark));
   }
 
   function applyWindowStyle(style) {
@@ -608,7 +789,12 @@
   // Final-value persistence only — called on pointerup / resize-end / a
   // debounced viewport-resize settle, never during pointermove, so normal
   // dragging and resizing never touch chrome.storage.
-  async function persistGeometry() {
+  // Accepts an optional extra partial to merge in the same read-modify-write
+  // (e.g. a new rotation angle) rather than issuing a second, separate
+  // getPrefs()/setPrefs() round trip — two independent persist* calls
+  // fired concurrently would each read a stale snapshot and could clobber
+  // whichever one's write lands second.
+  async function persistGeometry(extra) {
     if (!popupEl) return;
     const rect = popupEl.getBoundingClientRect();
     const prefs = await getPrefs();
@@ -616,6 +802,7 @@
     prefs.windowY = Math.round(rect.top);
     prefs.windowWidth = Math.round(popupEl.offsetWidth);
     prefs.windowHeight = Math.round(popupEl.offsetHeight);
+    if (extra) Object.assign(prefs, extra);
     await setPrefs(prefs);
   }
 
@@ -690,22 +877,26 @@
       });
     });
 
+    // Rotation can shrink/reposition the panel via keepPanelOnScreen() (see
+    // shrinkToFitViewport), so both geometry and the rotation angle itself
+    // need persisting here — as a single read-modify-write, not two
+    // independent persist calls that could race and clobber each other.
     document.getElementById("mhl-rotate-left")?.addEventListener("click", async () => {
       rotateBy(-ROTATE_STEP);
       updateAppearanceActiveStates();
-      await persistAppearance({ windowRotation: currentRotation });
+      await persistGeometry({ windowRotation: currentRotation });
     });
     document.getElementById("mhl-rotate-right")?.addEventListener("click", async () => {
       rotateBy(ROTATE_STEP);
       updateAppearanceActiveStates();
-      await persistAppearance({ windowRotation: currentRotation });
+      await persistGeometry({ windowRotation: currentRotation });
     });
 
     panel.querySelectorAll(".mhl-angle-chip[data-angle]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         setRotation(Number(btn.dataset.angle));
         updateAppearanceActiveStates();
-        await persistAppearance({ windowRotation: currentRotation });
+        await persistGeometry({ windowRotation: currentRotation });
       });
     });
 
@@ -902,33 +1093,74 @@
 
   // ---------- preferences (persisted via chrome.storage) ----------
 
+  const DEFAULT_PREFS = {
+    sourceLang: "ko",
+    targetLang: "en",
+    theme: "paper",
+    panelSize: "comfortable",
+    // Floating window customization (section: appearance menu). null
+    // means "not customized yet" — the panel keeps behaving exactly
+    // as it always did until the user actually moves/resizes it.
+    windowX: null,
+    windowY: null,
+    windowWidth: null,
+    windowHeight: null,
+    windowRotation: 0,
+    windowAccent: "default",
+    windowStyle: "classic"
+  };
+
+  // Dragging, resizing, rotating, and recoloring all apply to the DOM
+  // synchronously and only ever call this to persist the *final* value —
+  // so a slow, failing, or unavailable chrome.storage.sync never blocks or
+  // breaks live interaction, only the "remember this for next time" part.
+  // A short safety timeout also guards the (rare) case where the callback
+  // never fires at all, e.g. mid service-worker restart, so the panel can
+  // never get stuck waiting on storage before it can even render.
   function getPrefs() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get(
-        {
-          sourceLang: "ko",
-          targetLang: "en",
-          theme: "paper",
-          panelSize: "comfortable",
-          // Floating window customization (section: appearance menu). null
-          // means "not customized yet" — the panel keeps behaving exactly
-          // as it always did until the user actually moves/resizes it.
-          windowX: null,
-          windowY: null,
-          windowWidth: null,
-          windowHeight: null,
-          windowRotation: 0,
-          windowAccent: "default",
-          windowStyle: "classic"
-        },
-        resolve
-      );
+      let settled = false;
+      const finish = (prefs) => {
+        if (settled) return;
+        settled = true;
+        resolve(prefs);
+      };
+      const timeoutId = setTimeout(() => {
+        console.warn("Manhua Lens: chrome.storage.sync.get timed out, using defaults for this session.");
+        finish({ ...DEFAULT_PREFS });
+      }, 1500);
+
+      try {
+        chrome.storage.sync.get(DEFAULT_PREFS, (prefs) => {
+          clearTimeout(timeoutId);
+          if (chrome.runtime.lastError) {
+            console.warn("Manhua Lens: failed to read preferences, using defaults for this session.", chrome.runtime.lastError);
+            finish({ ...DEFAULT_PREFS });
+            return;
+          }
+          finish(prefs || { ...DEFAULT_PREFS });
+        });
+      } catch (err) {
+        clearTimeout(timeoutId);
+        console.warn("Manhua Lens: chrome.storage.sync.get threw, using defaults for this session.", err);
+        finish({ ...DEFAULT_PREFS });
+      }
     });
   }
 
   function setPrefs(prefs) {
     return new Promise((resolve) => {
-      chrome.storage.sync.set(prefs, resolve);
+      try {
+        chrome.storage.sync.set(prefs, () => {
+          if (chrome.runtime.lastError) {
+            console.warn("Manhua Lens: failed to save preferences (current session is unaffected).", chrome.runtime.lastError);
+          }
+          resolve();
+        });
+      } catch (err) {
+        console.warn("Manhua Lens: chrome.storage.sync.set threw (current session is unaffected).", err);
+        resolve();
+      }
     });
   }
 
@@ -946,11 +1178,16 @@
       clampNumber,
       rotateDelta,
       rotatedBoundingBox,
+      computeFitScale,
+      fitSizeToViewport,
       hexToRgb,
       rgbToHex,
       darkenHex,
       hexToRgba,
-      perceivedBrightness,
+      relativeLuminance,
+      contrastRatio,
+      pickAccentForeground,
+      ensureLegibleAsBackground,
       isValidHexColor,
       normalizeAccent,
       normalizeWindowStyle,
@@ -960,7 +1197,12 @@
       SHAPE_KEYS,
       MIN_WIDTH,
       MIN_HEIGHT,
-      ROTATE_MAX
+      ROTATE_MAX,
+      WCAG_AA_NORMAL_TEXT,
+      ACCENT_FG_LIGHT,
+      ACCENT_FG_DARK,
+      getPrefs,
+      setPrefs
     });
   }
 })();

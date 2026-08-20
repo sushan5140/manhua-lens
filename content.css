@@ -3,7 +3,9 @@
   position: absolute;
   z-index: 2147483647;
   width: 340px;
-  min-width: 280px;
+  /* Must stay >= content.js's MIN_WIDTH (the header's 6 action buttons need
+     ~363px to avoid overflowing at very small custom-resized widths). */
+  min-width: 380px;
   min-height: 160px;
   max-width: calc(100vw - 16px);
   max-height: calc(100vh - 16px);
