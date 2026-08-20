@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Manhua Lens",
-  "version": "0.2.4",
-  "description": "Select text on any page to see word-by-word readings, definitions, and translation — built for reading manhwa/manhua/manga in Korean, Japanese, or Chinese.",
+  "version": "0.3.0",
+  "description": "Select text on any page for word-by-word definitions, readings, translation, and pronunciation across 11 languages.",
   "permissions": ["storage", "activeTab", "scripting", "tts"],
   "host_permissions": ["<all_urls>"],
   "background": {

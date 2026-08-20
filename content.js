@@ -17,7 +17,12 @@
   let speechRequestId = 0;
   let preservePanelUntil = 0;
 
-  const LABELS = { en: "English", ja: "日本語", ko: "한국어", zh: "中文", fr: "Français", es: "Español" };
+  const LABELS = {
+    en: "English", ja: "日本語", ko: "한국어", zh: "中文", fr: "Français", es: "Español",
+    it: "Italiano", de: "Deutsch", pt: "Português", cs: "Čeština", tr: "Türkçe", la: "Latina"
+  };
+  const SOURCE_LANGS = ["ko", "ja", "zh", "fr", "es", "it", "de", "pt", "cs", "tr", "la"];
+  const TARGET_LANGS = ["en", ...SOURCE_LANGS];
 
   // ---------- selection detection ----------
 
@@ -84,12 +89,13 @@
     currentSourceLang = prefs.sourceLang;
 
     popupEl = document.createElement("div");
-    popupEl.className = "mhl-lens";
+    popupEl.className = `mhl-lens mhl-theme-${prefs.theme} mhl-size-${prefs.panelSize}`;
     popupEl.style.left = `${window.scrollX + rect.left}px`;
     popupEl.style.top = `${window.scrollY + rect.bottom + 8}px`;
 
     popupEl.innerHTML = renderSkeleton(text, prefs);
     document.body.appendChild(popupEl);
+    keepPanelOnScreen();
 
     // Keep the original page selection active when the user clicks a panel
     // control. This prevents selectionchange from treating pronunciation,
@@ -104,6 +110,7 @@
     );
 
     wireHeaderControls(prefs);
+    wireDragging();
     wireSentenceSpeak(text);
     requestLookup(text, prefs);
   }
@@ -125,6 +132,10 @@
         </div>
 
         <div class="mhl-actions">
+          <button title="re-read selection" id="mhl-refresh">↻</button>
+          <button title="change panel size" id="mhl-size">↔</button>
+          <button title="change theme" id="mhl-theme">◐</button>
+          <button title="fold panel" id="mhl-fold">⌃</button>
           <button title="close" id="mhl-close">✕</button>
         </div>
       </div>
@@ -151,7 +162,7 @@
   }
 
   function renderDropdown(id, activeLang, isLight) {
-    const langs = ["ko", "ja", "zh", "fr", "es", "en"];
+    const langs = isLight ? TARGET_LANGS : SOURCE_LANGS;
     const items = langs
       .map(
         (l) => `
@@ -165,6 +176,26 @@
 
   function wireHeaderControls(prefs) {
     document.getElementById("mhl-close").addEventListener("click", removePopup);
+    document.getElementById("mhl-refresh").addEventListener("click", async () => requestLookup(currentSelectionText, await getPrefs()));
+    document.getElementById("mhl-fold").addEventListener("click", (event) => {
+      popupEl.classList.toggle("mhl-folded");
+      event.currentTarget.textContent = popupEl.classList.contains("mhl-folded") ? "⌄" : "⌃";
+    });
+    document.getElementById("mhl-theme").addEventListener("click", async () => {
+      const themes = ["paper", "midnight", "contrast"];
+      prefs.theme = themes[(themes.indexOf(prefs.theme) + 1) % themes.length];
+      popupEl.classList.remove(...themes.map((theme) => `mhl-theme-${theme}`));
+      popupEl.classList.add(`mhl-theme-${prefs.theme}`);
+      await setPrefs(prefs);
+    });
+    document.getElementById("mhl-size").addEventListener("click", async () => {
+      const sizes = ["compact", "comfortable", "wide"];
+      prefs.panelSize = sizes[(sizes.indexOf(prefs.panelSize) + 1) % sizes.length];
+      popupEl.classList.remove(...sizes.map((size) => `mhl-size-${size}`));
+      popupEl.classList.add(`mhl-size-${prefs.panelSize}`);
+      keepPanelOnScreen();
+      await setPrefs(prefs);
+    });
 
     wireDropdown("mhl-src-toggle", "mhl-src-dropdown", async (lang) => {
       const p = await getPrefs();
@@ -182,6 +213,40 @@
       document.getElementById("mhl-tgt-label").textContent = LABELS[lang];
       requestLookup(currentSelectionText, p);
     });
+  }
+
+  function wireDragging() {
+    const header = popupEl?.querySelector(".mhl-header");
+    if (!header) return;
+    header.addEventListener("pointerdown", (event) => {
+      if (event.target.closest("button, .mhl-lang, .mhl-dropdown")) return;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const startLeft = popupEl.offsetLeft;
+      const startTop = popupEl.offsetTop;
+      header.setPointerCapture(event.pointerId);
+      const move = (moveEvent) => {
+        popupEl.style.left = `${startLeft + moveEvent.clientX - startX}px`;
+        popupEl.style.top = `${startTop + moveEvent.clientY - startY}px`;
+      };
+      const stop = () => {
+        header.removeEventListener("pointermove", move);
+        keepPanelOnScreen();
+      };
+      header.addEventListener("pointermove", move);
+      header.addEventListener("pointerup", stop, { once: true });
+      header.addEventListener("pointercancel", stop, { once: true });
+    });
+  }
+
+  function keepPanelOnScreen() {
+    if (!popupEl) return;
+    const margin = 8;
+    const rect = popupEl.getBoundingClientRect();
+    const left = Math.min(Math.max(rect.left, margin), Math.max(margin, innerWidth - rect.width - margin));
+    const top = Math.min(Math.max(rect.top, margin), Math.max(margin, innerHeight - Math.min(rect.height, innerHeight - 16) - margin));
+    popupEl.style.left = `${scrollX + left}px`;
+    popupEl.style.top = `${scrollY + top}px`;
   }
 
   function wireDropdown(toggleId, dropdownId, onPick) {
@@ -277,6 +342,7 @@
             ${sourceDot}
           </p>
           <p class="mhl-def"><span class="mhl-pos">${escapeHtml(w.pos || "")}</span> — ${escapeHtml(w.definition || "")}</p>
+          ${renderMoreSenses(w.allSenses)}
         </div>
       `;
     });
@@ -286,6 +352,14 @@
     contentEl.querySelectorAll(".mhl-speak-word").forEach((el) => {
       el.addEventListener("click", () => speak(el.dataset.word, currentSourceLang));
     });
+  }
+
+  function renderMoreSenses(senses) {
+    if (!Array.isArray(senses) || senses.length < 2) return "";
+    const extra = senses.slice(1, 8).map((sense) => `
+      <li><span class="mhl-pos">${escapeHtml(sense.pos || "")}</span>${sense.pos ? " — " : ""}${escapeHtml(sense.definition || "")}</li>
+    `).join("");
+    return `<details class="mhl-senses"><summary>${senses.length - 1} more meaning${senses.length > 2 ? "s" : ""}</summary><ul>${extra}</ul></details>`;
   }
 
   function speak(text, lang) {
@@ -332,7 +406,7 @@
 
   function getPrefs() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en" }, resolve);
+      chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable" }, resolve);
     });
   }
 

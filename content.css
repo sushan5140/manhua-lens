@@ -2,12 +2,22 @@
   all: initial;
   position: absolute;
   z-index: 2147483647;
-  width: 300px;
+  width: 340px;
+  min-width: 300px;
+  min-height: 120px;
+  max-width: min(640px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  resize: both;
+  overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   border-radius: 20px;
   box-shadow: 0 2px 6px rgba(13, 36, 64, 0.08), 0 18px 44px rgba(13, 36, 64, 0.22);
   display: block;
 }
+
+.mhl-lens.mhl-size-compact { width: 300px; }
+.mhl-lens.mhl-size-comfortable { width: 340px; }
+.mhl-lens.mhl-size-wide { width: 460px; }
 
 .mhl-lens * {
   box-sizing: border-box;
@@ -22,7 +32,10 @@
   align-items: center;
   gap: 8px;
   position: relative;
+  cursor: grab;
+  touch-action: none;
 }
+.mhl-header:active { cursor: grabbing; }
 
 .mhl-icon {
   width: 26px;
@@ -108,7 +121,14 @@
   border-radius: 0 0 20px 20px;
   padding: 16px 20px 20px;
   position: relative;
+  overflow: auto;
+  max-height: min(520px, calc(100vh - 112px));
 }
+
+.mhl-folded .mhl-translate-bar,
+.mhl-folded .mhl-body { display: none; }
+.mhl-folded { min-height: 0; height: auto !important; resize: horizontal; }
+.mhl-folded .mhl-header { border-radius: 20px; }
 
 .mhl-source {
   font-size: 10px;
@@ -196,6 +216,15 @@
 }
 .mhl-pos { opacity: 0.75; font-style: italic; }
 
+.mhl-senses {
+  margin-top: 7px;
+  color: #5C7B9C;
+  font-size: 11.5px;
+}
+.mhl-senses summary { cursor: pointer; color: #2E5E99; font-weight: 600; }
+.mhl-senses ul { margin: 6px 0 0; padding-left: 18px; }
+.mhl-senses li { margin: 4px 0; line-height: 1.35; }
+
 .mhl-particle {
   padding-bottom: 10px;
   margin-bottom: 10px;
@@ -276,3 +305,23 @@
 .mhl-dropdown.light .mhl-item.active { background: #2E5E99; color: #fff; }
 
 .mhl-check { font-size: 12px; opacity: 0.9; width: 14px; text-align: right; }
+
+/* Optional viewing themes adapted for long reading sessions. */
+.mhl-theme-midnight .mhl-header { background: linear-gradient(115deg, #172033, #080d17); }
+.mhl-theme-midnight .mhl-translate-bar { background: #182235; border-color: #29364c; color: #9fc2ee; }
+.mhl-theme-midnight .mhl-body { background: #0f1725; }
+.mhl-theme-midnight .mhl-source,
+.mhl-theme-midnight .mhl-def,
+.mhl-theme-midnight .mhl-senses { color: #9cadc3; }
+.mhl-theme-midnight .mhl-headword,
+.mhl-theme-midnight .mhl-sentence-translation { color: #edf4ff; }
+.mhl-theme-midnight .mhl-entry,
+.mhl-theme-midnight .mhl-sentence-translation { border-color: #29364c; }
+
+.mhl-theme-contrast { outline: 3px solid #111; border-radius: 20px; }
+.mhl-theme-contrast .mhl-header { background: #111; }
+.mhl-theme-contrast .mhl-translate-bar { background: #ffe45c; border-color: #111; color: #111; }
+.mhl-theme-contrast .mhl-body { background: #fff; }
+.mhl-theme-contrast .mhl-headword,
+.mhl-theme-contrast .mhl-sentence-translation,
+.mhl-theme-contrast .mhl-def { color: #000; }

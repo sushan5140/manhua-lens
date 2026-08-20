@@ -1,0 +1,19 @@
+Translation Lens — dictionary licenses and attribution
+=====================================================
+
+DICTIONARY DATA — Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)
+
+  Chinese   CC-CEDICT — https://www.mdbg.net/chinese/dictionary?page=cc-cedict
+  Japanese  JMdict/EDICT, Electronic Dictionary Research and Development
+            Group — https://www.edrdg.org/jmdict/j_jmdict.html
+  Korean    English Wiktionary, extracted by kaikki.org
+  French, Spanish, Italian, German, Portuguese, Czech, Turkish, Latin
+            WikDict — https://www.wikdict.com — derived from Wiktionary
+
+  The lexicon files distributed with Translation Lens are adaptations of
+  the above databases and remain licensed CC BY-SA 4.0.
+  Full license: https://creativecommons.org/licenses/by-sa/4.0/
+
+Manhua Lens conversion: the upstream data-only pickle dictionaries were
+converted to compact JSON and normalized to reading, part-of-speech, and
+definition fields for use in a Chromium extension.

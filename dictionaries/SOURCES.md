@@ -1,6 +1,10 @@
 # Dictionary sources and licenses
 
-The five JSON files are separate derived datasets. Redistribution must preserve the attribution and share-alike terms of the source used for each file. No examples, audio, images, or machine-generated definitions are included.
+## Current v0.3 dictionaries
+
+Version 0.3 replaces the earlier frequency-limited five-language files described below with 11 complete lexicons converted from Translation Lens Windows v1.0.0. See [`TRANSLATION_LENS_ATTRIBUTION.md`](TRANSLATION_LENS_ATTRIBUTION.md) and [`TRANSLATION_LENS_LICENSES.txt`](TRANSLATION_LENS_LICENSES.txt) for current provenance and redistribution terms. The older build notes below are retained as project history.
+
+The older five JSON files were separate derived datasets. Redistribution must preserve the attribution and share-alike terms of the source used for each file. No examples, audio, images, or machine-generated definitions were included.
 
 ## Japanese (`ja.json`)
 

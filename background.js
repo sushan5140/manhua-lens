@@ -14,12 +14,8 @@
 const GT_ENDPOINT = "https://translate.googleapis.com/translate_a/single";
 
 // ---------- manual supplement ----------
-// The bundled dictionaries are frequency-ranked to the top ~25,000
-// words per language, so honorifics and royalty/fantasy-genre
-// vocabulary common in manhwa/manhua but rare in everyday text
-// (황자님, 폐하, 영애, etc.) often aren't included. This small
-// hand-maintained list fills the most common gaps; extend it over
-// time as more misses turn up during real reading.
+// Keep a small hand-maintained supplement for manhwa-specific honorifics
+// and fantasy vocabulary that may still be absent from the broad lexicons.
 
 const SUPPLEMENT = {
   ko: {
@@ -40,7 +36,7 @@ function supplementLookup(word, sourceLang) {
   return { word, reading: primary.reading, pos: primary.pos, definition: primary.definition, allSenses: senses };
 }
 
-const DICTIONARY_LANGS = ["ja", "zh", "ko", "fr", "es"];
+const DICTIONARY_LANGS = ["zh", "ja", "ko", "fr", "es", "it", "de", "pt", "cs", "tr", "la"];
 const dictionaryCache = {}; // lang -> Promise<{word: [{reading,pos,definition}]}>
 
 function loadDictionary(lang) {
@@ -64,19 +60,16 @@ function loadDictionary(lang) {
 async function dictionaryLookup(word, sourceLang) {
   const dict = await loadDictionary(sourceLang);
   if (!dict) return null;
-  const senses = dict[word];
+  const senses = dict[word] || dict[word.toLocaleLowerCase(sourceLang)];
   if (!senses || senses.length === 0) return null;
 
-  // popup shows one primary sense inline plus a count of additional senses
   const primary = senses[0];
-  const extra = senses.length - 1;
-  const definition = extra > 0 ? `${primary.definition} (+${extra} more sense${extra > 1 ? "s" : ""})` : primary.definition;
 
   return {
     word,
     reading: primary.reading || "",
     pos: primary.pos || "",
-    definition,
+    definition: primary.definition,
     allSenses: senses
   };
 }
@@ -102,19 +95,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // content-script context. Using chrome.tts keeps it independent of the
 // page's permissions and of whether window.speechSynthesis is exposed.
 
-const BCP47 = { ko: "ko-KR", ja: "ja-JP", zh: "zh-CN", fr: "fr-FR", es: "es-ES", en: "en-US" };
+const BCP47 = {
+  ko: "ko-KR", ja: "ja-JP", zh: "zh-CN", fr: "fr-FR", es: "es-ES", it: "it-IT",
+  de: "de-DE", pt: "pt-PT", cs: "cs-CZ", tr: "tr-TR", en: "en-US"
+};
+
+const LANGUAGE_NAMES = {
+  ko: "Korean", ja: "Japanese", zh: "Chinese", fr: "French", es: "Spanish", it: "Italian",
+  de: "German", pt: "Portuguese", cs: "Czech", tr: "Turkish", la: "Latin", en: "English"
+};
 
 async function handleSpeak(text, lang) {
   const cleanText = String(text || "").trim();
   if (!cleanText) throw new Error("There is no text to pronounce.");
+  if (lang === "la") throw new Error("Latin pronunciation is not available through Windows speech voices.");
 
   const targetLang = BCP47[lang] || "en-US";
   const voices = await chrome.tts.getVoices();
   const voice = voices.find((v) => v.lang === targetLang) || voices.find((v) => v.lang?.startsWith(`${lang}-`));
 
   if (voices.length > 0 && !voice) {
-    const names = { ko: "Korean", ja: "Japanese", zh: "Chinese", fr: "French", es: "Spanish", en: "English" };
-    throw new Error(`No ${names[lang] || lang} voice is installed on this device.`);
+    throw new Error(`No ${LANGUAGE_NAMES[lang] || lang} voice is installed on this device.`);
   }
 
   chrome.tts.stop();
@@ -152,7 +153,7 @@ async function handleLookup(text, sourceLang, targetLang) {
     // nothing to translate — just split words and show them plain
     return {
       sentenceTranslation: text,
-      words: splitIntoWords(text, sourceLang).map((w) => ({
+      words: (await splitIntoWords(text, sourceLang)).map((w) => ({
         word: w,
         reading: "",
         pos: "",
@@ -167,7 +168,7 @@ async function handleLookup(text, sourceLang, targetLang) {
     () => "Translation unavailable — showing dictionary results below."
   );
 
-  const words = splitIntoWords(text, sourceLang);
+  const words = await splitIntoWords(text, sourceLang);
   const wordResults = await Promise.all(
     words.map(async (word) => {
       const particleLabel = sourceLang === "ko" ? KOREAN_PARTICLE_LABELS[word] : undefined;
@@ -263,34 +264,49 @@ async function getReading(word, sourceLang) {
 }
 
 // ---------- word splitting ----------
-// Real segmentation (especially for Chinese/Japanese, which don't use
-// spaces) needs a full tokenizer/dictionary. Until that's wired in:
-// - Korean gets rule-based particle splitting (see splitKorean below) —
-//   this is a closed, well-defined grammar class so a hand-written rule
-//   set is reliable without pulling in a model or server
-// - Chinese/Japanese still fall back to per-character splitting
-// - French/Spanish split on spaces
+// Chinese and Japanese do not put spaces between words. Use the bundled
+// lexicon for longest-match segmentation so compounds are looked up as
+// words instead of being reduced to isolated characters.
 
-function splitIntoWords(text, sourceLang) {
-  const cleaned = text.replace(/[.,!?"'「」『』“”…]/g, " ").trim();
+async function splitIntoWords(text, sourceLang) {
+  const cleaned = text.replace(/[\p{P}\p{S}]+/gu, " ").trim();
 
   if (sourceLang === "ko") {
     return cleaned
       .split(/\s+/)
       .filter(Boolean)
       .flatMap(splitKorean)
-      .slice(0, 8);
+      .slice(0, 20);
   }
 
   if (sourceLang === "zh" || sourceLang === "ja") {
-    return cleaned
-      .replace(/\s+/g, "")
-      .split("")
-      .filter(Boolean)
-      .slice(0, 6); // cap so the popup doesn't get enormous on long selections
+    const dict = await loadDictionary(sourceLang);
+    return segmentCjk(cleaned, dict).slice(0, 20);
   }
 
-  return cleaned.split(/\s+/).filter(Boolean).slice(0, 6);
+  return (cleaned.match(/[\p{L}\p{M}]+(?:['’\-][\p{L}\p{M}]+)*/gu) || []).slice(0, 20);
+}
+
+function segmentCjk(text, dict) {
+  const compact = text.replace(/\s+/g, "");
+  if (!dict) return Array.from(compact);
+
+  const words = [];
+  let index = 0;
+  while (index < compact.length) {
+    const remaining = compact.length - index;
+    let match = "";
+    for (let length = Math.min(16, remaining); length > 0; length -= 1) {
+      const candidate = compact.slice(index, index + length);
+      if (dict[candidate]) {
+        match = candidate;
+        break;
+      }
+    }
+    words.push(match || compact[index]);
+    index += (match || compact[index]).length;
+  }
+  return words;
 }
 
 // ---------- Korean particle (조사) splitting ----------

@@ -2,7 +2,7 @@
 
 **A free, open-source Chromium browser extension for reading manhwa, manhua, manga, and foreign-language webpages with instant word-by-word translation, readings, definitions, grammar hints, and pronunciation.**
 
-Manhua Lens is built for language learners and readers who want to understand **Korean, Japanese, Chinese, French, or Spanish text directly on the page** without constantly switching to a separate dictionary or translator.
+Manhua Lens is built for readers who want to understand **Korean, Japanese, Chinese, French, Spanish, Italian, German, Portuguese, Czech, Turkish, or Latin text directly on the page** without constantly switching to a separate dictionary or translator.
 
 Highlight a phrase and Manhua Lens opens a compact reading panel with sentence translation, dictionary results for individual words, romanized readings, part-of-speech information, Korean particle handling, and text-to-speech.
 
@@ -21,7 +21,8 @@ It can be useful for:
 ## Features
 
 - Select text on a webpage to open an instant translation panel
-- Word-by-word dictionary lookup for **Korean, Japanese, Chinese, French, and Spanish**
+- Word-by-word offline dictionary lookup for **11 source languages**
+- Dictionary-aware Chinese and Japanese phrase segmentation instead of character-by-character lookup
 - Sentence translation alongside individual word results
 - Romanized readings and part-of-speech information where available
 - Korean particle splitting and grammar labels
@@ -30,17 +31,25 @@ It can be useful for:
 - Bundled offline dictionaries for resilient word lookup
 - Graceful offline results when the online sentence-translation service is unavailable
 - Toolbar popup with language settings and a built-in page activation check
+- Draggable, resizable, foldable reading panel with three viewing themes
+- Expandable secondary dictionary meanings and a one-click re-read control
 - Manifest V3 extension for Microsoft Edge and Chromium-based browsers
 
 ## Supported languages
 
-| Language | Word lookup | Reading / language hints | Pronunciation |
+| Language | Offline headwords | Reading / language hints | Pronunciation |
 | --- | --- | --- | --- |
-| Korean | Yes | Romanization, particles, grammar labels | Yes |
-| Japanese | Yes | Reading information where available | Yes |
-| Chinese | Yes | Reading information where available | Yes |
-| French | Yes | Part-of-speech information where available | Yes |
-| Spanish | Yes | Part-of-speech information where available | Yes |
+| Korean | 32,859 | Romanization, particles, grammar labels | Yes |
+| Japanese | 464,013 | Reading information where available | Yes |
+| Chinese | 197,554 | Reading information where available | Yes |
+| French | 163,407 | Part-of-speech information where available | Yes |
+| Spanish | 96,625 | Part-of-speech information where available | Yes |
+| Italian | 70,548 | Part-of-speech information where available | Yes |
+| German | 143,736 | Part-of-speech information where available | Yes |
+| Portuguese | 67,341 | Part-of-speech information where available | Yes |
+| Czech | 48,917 | Part-of-speech information where available | Yes |
+| Turkish | 41,672 | Part-of-speech information where available | Yes |
+| Latin | 24,197 | Part-of-speech information where available | Device voice unavailable |
 
 ## Install in Microsoft Edge
 
@@ -69,6 +78,10 @@ Manhua Lens uses a Manifest V3 service worker together with an in-page content s
 
 Bundled dictionaries allow individual-word results to remain available even when an online sentence-translation service cannot be reached.
 
+## Translation Lens Windows adaptation
+
+Version 0.3 adapts the complete 11-language dictionary collection and several panel conveniences from [Translation Lens Windows](https://github.com/cristaecooks/translation-lens-windows). Its published repository contains documentation rather than application source, so this is a compatible browser implementation—not a source-code merge. Native Windows Tesseract binaries cannot execute inside a Chromium extension; image OCR therefore remains separate from this selection-based release.
+
 ## Project structure
 
 - `manifest.json` — Manifest V3 extension configuration
@@ -86,7 +99,7 @@ Manhua Lens is an **open-source manhwa, manga, and manhua reading assistant**, *
 
 ## Current version
 
-`0.2.4`
+`0.3.0`
 
 ## Contributing
 
