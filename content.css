@@ -3,16 +3,20 @@
   position: absolute;
   z-index: 2147483647;
   width: 340px;
-  min-width: 300px;
-  min-height: 120px;
-  max-width: min(640px, calc(100vw - 16px));
+  min-width: 280px;
+  min-height: 160px;
+  max-width: calc(100vw - 16px);
   max-height: calc(100vh - 16px);
-  resize: both;
-  overflow: hidden;
+  overflow: visible;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  border-radius: 20px;
   box-shadow: 0 2px 6px rgba(13, 36, 64, 0.08), 0 18px 44px rgba(13, 36, 64, 0.22);
   display: block;
+  /* Accent customization tokens. Defaults reproduce the original fixed blue
+     header so an unmodified install renders pixel-identical to before. */
+  --mhl-accent-light: #2E5E99;
+  --mhl-accent-dark: #0D2440;
+  --mhl-accent-soft: rgba(46, 94, 153, 0.14);
+  --mhl-accent-fg: #F5F9FF;
 }
 
 .mhl-lens.mhl-size-compact { width: 300px; }
@@ -25,8 +29,7 @@
 }
 
 .mhl-header {
-  background: linear-gradient(115deg, #2E5E99, #0D2440);
-  border-radius: 20px 20px 0 0;
+  background: linear-gradient(115deg, var(--mhl-accent-light), var(--mhl-accent-dark));
   padding: 11px 14px;
   display: flex;
   align-items: center;
@@ -50,7 +53,7 @@
 }
 
 .mhl-title {
-  color: #F5F9FF;
+  color: var(--mhl-accent-fg);
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.2px;
@@ -114,11 +117,10 @@
   align-items: center;
   gap: 3px;
 }
-.mhl-to-lang:hover { background: rgba(46, 94, 153, 0.08); }
+.mhl-to-lang:hover { background: var(--mhl-accent-soft); }
 
 .mhl-body {
   background: #FCFEFF;
-  border-radius: 0 0 20px 20px;
   padding: 16px 20px 20px;
   position: relative;
   overflow: auto;
@@ -127,8 +129,56 @@
 
 .mhl-folded .mhl-translate-bar,
 .mhl-folded .mhl-body { display: none; }
-.mhl-folded { min-height: 0; height: auto !important; resize: horizontal; }
-.mhl-folded .mhl-header { border-radius: 20px; }
+.mhl-folded { min-height: 0; height: auto !important; }
+
+/* Window shape presets. Classic reproduces the original fixed 20px look. */
+.mhl-shape-classic .mhl-header { border-radius: 20px 20px 0 0; }
+.mhl-shape-classic .mhl-body { border-radius: 0 0 20px 20px; }
+.mhl-shape-classic.mhl-folded .mhl-header { border-radius: 20px; }
+
+.mhl-shape-soft .mhl-header { border-radius: 28px 28px 0 0; }
+.mhl-shape-soft .mhl-body { border-radius: 0 0 28px 28px; }
+.mhl-shape-soft.mhl-folded .mhl-header { border-radius: 28px; }
+
+.mhl-shape-compact .mhl-header { border-radius: 10px 10px 0 0; padding: 7px 12px; }
+.mhl-shape-compact .mhl-body { border-radius: 0 0 10px 10px; padding: 12px 16px 16px; }
+.mhl-shape-compact.mhl-folded .mhl-header { border-radius: 10px; }
+.mhl-shape-compact .mhl-title { font-size: 13px; }
+
+.mhl-shape-square .mhl-header { border-radius: 4px 4px 0 0; }
+.mhl-shape-square .mhl-body { border-radius: 0 0 4px 4px; }
+.mhl-shape-square.mhl-folded .mhl-header { border-radius: 4px; }
+
+.mhl-shape-bubble .mhl-header { border-radius: 32px 32px 0 0; padding: 12px 18px; }
+.mhl-shape-bubble .mhl-body { border-radius: 0 0 32px 32px; }
+.mhl-shape-bubble.mhl-folded .mhl-header { border-radius: 999px; }
+.mhl-shape-bubble .mhl-icon { border-radius: 50%; }
+
+/* Live resize handles (replace the browser's native corner-only resize so
+   dragging tracks correctly even while the window is rotated). */
+.mhl-resize-e, .mhl-resize-s, .mhl-resize-se {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.mhl-resize-e { top: 0; right: -1px; width: 10px; height: 100%; cursor: ew-resize; }
+.mhl-resize-s { left: 0; bottom: -1px; height: 10px; width: 100%; cursor: ns-resize; }
+.mhl-resize-se { right: -1px; bottom: -1px; width: 16px; height: 16px; cursor: nwse-resize; z-index: 6; }
+.mhl-folded .mhl-resize-s, .mhl-folded .mhl-resize-se { display: none; }
+.mhl-resize-se::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  background: linear-gradient(135deg, transparent 50%, rgba(13, 36, 64, 0.28) 50%);
+  border-radius: 0 0 3px 0;
+  pointer-events: none;
+}
 
 .mhl-source {
   font-size: 10px;
@@ -146,7 +196,7 @@
   height: 16px;
   border-radius: 50%;
   background: #E7F0FA;
-  color: #2E5E99;
+  color: var(--mhl-accent-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -198,7 +248,7 @@
   font-style: normal;
   font-weight: 600;
   font-size: 14px;
-  color: #2E5E99;
+  color: var(--mhl-accent-light);
 }
 
 .mhl-speak-word {
@@ -221,7 +271,7 @@
   color: #5C7B9C;
   font-size: 11.5px;
 }
-.mhl-senses summary { cursor: pointer; color: #2E5E99; font-weight: 600; }
+.mhl-senses summary { cursor: pointer; color: var(--mhl-accent-light); font-weight: 600; }
 .mhl-senses ul { margin: 6px 0 0; padding-left: 18px; }
 .mhl-senses li { margin: 4px 0; line-height: 1.35; }
 
@@ -260,7 +310,7 @@
   margin-left: auto;
   flex-shrink: 0;
 }
-.mhl-source-dict { background: #2E5E99; }
+.mhl-source-dict { background: var(--mhl-accent-light); }
 .mhl-source-mt { background: #BBB0AC; }
 
 .mhl-dropdown {
@@ -298,11 +348,16 @@
   white-space: nowrap;
 }
 .mhl-item:hover { background: rgba(255, 255, 255, 0.08); }
-.mhl-item.active { background: #2E5E99; color: #fff; }
+.mhl-item.active { background: var(--mhl-accent-light); color: #fff; }
 
 .mhl-dropdown.light .mhl-item { color: #2E5E99; }
 .mhl-dropdown.light .mhl-item:hover { background: #E7F0FA; }
-.mhl-dropdown.light .mhl-item.active { background: #2E5E99; color: #fff; }
+.mhl-dropdown.light .mhl-item.active { background: var(--mhl-accent-light); color: #fff; }
+
+.mhl-lens button:focus-visible {
+  outline: 2px solid var(--mhl-accent-light);
+  outline-offset: 2px;
+}
 
 .mhl-check { font-size: 12px; opacity: 0.9; width: 14px; text-align: right; }
 
@@ -325,3 +380,147 @@
 .mhl-theme-contrast .mhl-headword,
 .mhl-theme-contrast .mhl-sentence-translation,
 .mhl-theme-contrast .mhl-def { color: #000; }
+
+/* ---------- window appearance customization (drag / resize / rotate / accent / shape) ---------- */
+
+.mhl-appearance { position: relative; }
+
+/* The popover lives inside .mhl-header/.mhl-actions (same nesting pattern
+   as the existing language dropdowns) so it inherits header cascade rules.
+   Every rule below is scoped under .mhl-appearance-panel specifically so it
+   reliably outranks ".mhl-actions button" (which is otherwise a strong
+   sibling-scoped rule meant only for the small header icon buttons). */
+
+.mhl-appearance-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  background: #fff;
+  border: 1px solid #DCE9F7;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(13, 36, 64, 0.18);
+  padding: 12px;
+  width: 236px;
+  max-height: min(420px, calc(100vh - 80px));
+  overflow-y: auto;
+  display: none;
+  z-index: 20;
+  cursor: default;
+}
+.mhl-appearance-panel.open { display: block; }
+
+.mhl-appearance-panel .mhl-appearance-section { margin-bottom: 12px; }
+.mhl-appearance-panel .mhl-appearance-section:last-of-type { margin-bottom: 10px; }
+
+.mhl-appearance-panel .mhl-appearance-label {
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #7BA4D0;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.mhl-appearance-panel .mhl-swatch-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.mhl-appearance-panel .mhl-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: inset 0 0 0 1px rgba(13, 36, 64, 0.12);
+}
+.mhl-appearance-panel .mhl-swatch.active { border-color: #0D2440; }
+
+.mhl-appearance-panel .mhl-swatch-custom {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+.mhl-appearance-panel .mhl-swatch-custom::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; }
+.mhl-appearance-panel .mhl-swatch-custom::-webkit-color-swatch { border: 2px solid #fff; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(13, 36, 64, 0.12); }
+
+.mhl-appearance-panel .mhl-shape-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.mhl-appearance-panel .mhl-shape-option {
+  width: auto;
+  height: auto;
+  border: 1px solid #DCE9F7;
+  border-radius: 10px;
+  background: #FCFEFF;
+  padding: 6px 4px;
+  font-size: 10.5px;
+  color: #2E5E99;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.mhl-appearance-panel .mhl-shape-option.active { border-color: #2E5E99; background: #E7F0FA; font-weight: 600; }
+.mhl-appearance-panel .mhl-shape-preview { width: 28px; height: 16px; background: #DCE9F7; }
+.mhl-appearance-panel .mhl-shape-preview-classic { border-radius: 6px; }
+.mhl-appearance-panel .mhl-shape-preview-soft { border-radius: 9px; }
+.mhl-appearance-panel .mhl-shape-preview-compact { border-radius: 3px; }
+.mhl-appearance-panel .mhl-shape-preview-square { border-radius: 1px; }
+.mhl-appearance-panel .mhl-shape-preview-bubble { border-radius: 999px; }
+
+.mhl-appearance-panel .mhl-rotate-row { display: flex; align-items: center; gap: 6px; }
+.mhl-appearance-panel .mhl-rotate-row button {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid #DCE9F7;
+  background: #FCFEFF;
+  color: #2E5E99;
+  cursor: pointer;
+  font-size: 13px;
+}
+.mhl-appearance-panel .mhl-rotate-readout { flex: 1; text-align: center; font-size: 12px; color: #0D2440; font-weight: 600; }
+
+.mhl-appearance-panel .mhl-angle-chip-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.mhl-appearance-panel .mhl-angle-chip {
+  width: auto;
+  height: auto;
+  border: 1px solid #DCE9F7;
+  background: #fff;
+  color: #2E5E99;
+  border-radius: 999px;
+  font-size: 10.5px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.mhl-appearance-panel .mhl-angle-chip.active { background: #2E5E99; color: #fff; border-color: #2E5E99; }
+
+.mhl-appearance-panel .mhl-size-readout { font-size: 12px; color: #5C7B9C; margin: 0; }
+
+.mhl-appearance-panel .mhl-reset-btn {
+  width: 100%;
+  height: auto;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #F3C6C6;
+  background: #FCEBEC;
+  color: #A94442;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mhl-appearance-panel .mhl-reset-btn:hover { background: #F9DADA; }
+
+.mhl-theme-midnight .mhl-appearance-panel { background: #0f1725; border-color: #29364c; }
+.mhl-theme-midnight .mhl-appearance-panel .mhl-appearance-label { color: #9fc2ee; }
+.mhl-theme-midnight .mhl-appearance-panel .mhl-shape-option { background: #131f33; border-color: #29364c; color: #9fc2ee; }
+.mhl-theme-midnight .mhl-appearance-panel .mhl-shape-option.active { background: #1b2a44; border-color: #3f6fb0; }
+.mhl-theme-midnight .mhl-appearance-panel .mhl-rotate-row button { background: #131f33; border-color: #29364c; color: #9fc2ee; }
+.mhl-theme-midnight .mhl-appearance-panel .mhl-rotate-readout { color: #edf4ff; }
+.mhl-theme-midnight .mhl-appearance-panel .mhl-angle-chip { background: #131f33; border-color: #29364c; color: #9fc2ee; }
+.mhl-theme-midnight .mhl-appearance-panel .mhl-angle-chip.active { background: var(--mhl-accent-light); border-color: var(--mhl-accent-light); }
+.mhl-theme-midnight .mhl-appearance-panel .mhl-size-readout { color: #9cadc3; }
