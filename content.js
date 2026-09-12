@@ -379,9 +379,10 @@
         showSpeechWarning(response?.message || "Pronunciation is unavailable on this device.");
       }
 
-      // If the user cleared the selection while speech was playing, close
-      // only after the pronunciation has completed. Do not rebuild or move
-      // the existing panel when the original selection is still active.
+      // If the local cloned Korean voice is offline, background.js falls
+      // back to the device's Korean TTS automatically. Playback itself is
+      // handled in an extension offscreen document, so restrictive site CSP
+      // rules (including ChatGPT) cannot block the custom audio.
       setTimeout(closePopupIfSelectionCleared, response?.error ? 5000 : 350);
     });
   }
