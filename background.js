@@ -83,8 +83,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "MHL_SPEAK") {
-    handleSpeak(message.text, message.lang)
-      .then(() => sendResponse({ ok: true }))
+    handleBestSpeak(message.text, message.lang)
+      .then((result) => sendResponse({ ok: true, ...result }))
       .catch((err) => sendResponse({ error: true, message: err.message || String(err) }));
     return true;
   }
@@ -104,6 +104,79 @@ const LANGUAGE_NAMES = {
   ko: "Korean", ja: "Japanese", zh: "Chinese", fr: "French", es: "Spanish", it: "Italian",
   de: "German", pt: "Portuguese", cs: "Czech", tr: "Turkish", la: "Latin", en: "English"
 };
+
+const OPENVOICE_ENDPOINT = "http://127.0.0.1:8765/tts";
+const OFFSCREEN_DOCUMENT = "offscreen.html";
+
+async function handleBestSpeak(text, lang) {
+  const cleanText = String(text || "").trim();
+  if (!cleanText) throw new Error("There is no text to pronounce.");
+
+  if (lang === "ko") {
+    try {
+      const audioBase64 = await synthesizeOpenVoiceKorean(cleanText);
+      await playExtensionAudio(audioBase64, "audio/wav");
+      return { voice: "openvoice" };
+    } catch (err) {
+      console.warn("Manhua Lens: local OpenVoice unavailable; using device Korean voice.", err);
+      await handleSpeak(cleanText, lang);
+      return { voice: "device", fallback: true };
+    }
+  }
+
+  await handleSpeak(cleanText, lang);
+  return { voice: "device" };
+}
+
+async function synthesizeOpenVoiceKorean(text) {
+  const response = await fetch(OPENVOICE_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+    signal: AbortSignal.timeout(45000)
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenVoice request failed: ${response.status}`);
+  }
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function ensureOffscreenDocument() {
+  const url = chrome.runtime.getURL(OFFSCREEN_DOCUMENT);
+  const contexts = await chrome.runtime.getContexts({
+    contextTypes: ["OFFSCREEN_DOCUMENT"],
+    documentUrls: [url]
+  });
+
+  if (contexts.length > 0) return;
+
+  await chrome.offscreen.createDocument({
+    url: OFFSCREEN_DOCUMENT,
+    reasons: ["AUDIO_PLAYBACK"],
+    justification: "Play locally generated Korean pronunciation independently of webpage CSP."
+  });
+}
+
+async function playExtensionAudio(audioBase64, mimeType) {
+  await ensureOffscreenDocument();
+  const response = await chrome.runtime.sendMessage({
+    type: "MHL_PLAY_AUDIO",
+    audioBase64,
+    mimeType
+  });
+
+  if (!response?.ok) {
+    throw new Error(response?.message || "Custom pronunciation playback failed.");
+  }
+}
 
 async function handleSpeak(text, lang) {
   const cleanText = String(text || "").trim();
