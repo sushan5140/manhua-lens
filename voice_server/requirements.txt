@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+torch
+torchaudio
+git+https://github.com/myshell-ai/MeloTTS.git
