@@ -8,3 +8,30 @@ voice_server/voice_reference*.mp3
 voice_server/target_se.pth
 voice_server/checkpoints_v2/
 voice_server/.venv/
+
+# All speaker material and generated audio are PRIVATE, wherever copied.
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+*.pth
+*.pt
+*.npy
+*.npz
+voice_server/private/
+voice_server/OpenVoice/
+voice_server/.runtime/
+voice_server/.tools/
+voice_server/processed/
+**/.ipynb_checkpoints/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Notebook/API credentials are never public source.
+.env
+.env.*
+!.env.example
+kaggle.json
+**/.kaggle/

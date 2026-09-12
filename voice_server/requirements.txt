@@ -1,5 +1,3 @@
-fastapi
-uvicorn[standard]
-torch
-torchaudio
-git+https://github.com/myshell-ai/MeloTTS.git
+# HTTP layer only. Full model setup: python setup_runtime.py
+fastapi==0.115.6
+uvicorn==0.34.0
