@@ -1,18 +1,32 @@
 {
   "manifest_version": 3,
   "name": "Manhua Lens",
-  "version": "0.3.0",
-  "description": "Select text on any page for word-by-word definitions, readings, translation, and pronunciation across 11 languages.",
-  "permissions": ["storage", "activeTab", "scripting", "tts"],
-  "host_permissions": ["<all_urls>"],
+  "version": "0.4.0",
+  "description": "Select text on any page for word-by-word definitions, readings, translation, and pronunciation, with optional local OpenVoice Korean speech.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tts",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "css": ["content.css"],
-      "js": ["content.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle",
       "all_frames": true,
       "match_about_blank": true
