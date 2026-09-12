@@ -6,6 +6,10 @@ Manhua Lens is built for readers who want to understand **Korean, Japanese, Chin
 
 Highlight a phrase and Manhua Lens opens a compact reading panel with sentence translation, dictionary results for individual words, romanized readings, part-of-speech information, Korean particle handling, and text-to-speech.
 
+<p align="center">
+  <img src="docs/manhua-lens-demo.gif" alt="Manhua Lens demo showing Korean text selection, translation, word breakdown, and pronunciation" width="960">
+</p>
+
 ## Why Manhua Lens?
 
 Reading comics and native webpages is one of the fastest ways to meet real vocabulary in context, but looking up every unfamiliar word can interrupt the flow. Manhua Lens keeps the lookup beside the text you are already reading.
