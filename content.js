@@ -364,6 +364,12 @@
 
   function speak(text, lang) {
     if (!text) return;
+
+    // Korean study text should always use the Korean pronunciation path,
+    // even if the extension's current source-language dropdown was changed
+    // earlier for another page.
+    if (/[가-힣ㄱ-ㅎㅏ-ㅣ]/.test(text)) lang = "ko";
+
     const requestId = ++speechRequestId;
     speechInProgress = true;
     preservePanelUntil = Number.POSITIVE_INFINITY;
