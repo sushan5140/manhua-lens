@@ -5,7 +5,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PUBLIC_FILES = ["voice_assets.py", "engine.py", "korean_frontend.py", "setup_runtime.py", "prepare_voice.py",
-                "requirements.txt", "requirements-models.txt"]
+                "reference_selection.py", "requirements.txt", "requirements-models.txt", "requirements-extraction.txt"]
 
 
 def main():

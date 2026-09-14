@@ -35,19 +35,45 @@ which required C++ Build Tools in our test.
 
 Upload `openvoice_reference_korean_full.wav` through the session upload widget.
 Do NOT use Kaggle Add Data / Dataset upload. If widgets are unavailable, use the
-included Colab session-upload fallback. Use clean single-speaker speech, without
-music or other voices. The extractor averages short chunks from this prepared WAV;
-it does not run ASR or promise to clean a noisy recording.
+included Colab session-upload fallback. Use clean single-speaker speech, without music or other voices. Selection targets
+25 seconds (configurable 20–30s) from your longer recording. Silero VAD removes
+long silence; acoustic proxies screen low volume, background noise, clipping,
+large level variation, and wide pitch variation. Screening cannot prove one
+speaker or no music: listen to the selected reference before extraction.
+
+Reference normalization is mono/16 kHz for VAD, DC removal, and a single safe
+gain toward -22 dBFS RMS with a -3 dBFS peak ceiling and at most +12 dB gain.
+RMS is not LUFS loudness. No denoising/compression/pitch flattening is applied.
+OpenVoice loads/resamples the selected WAV to the converter's configured rate.
+The actual embedding uses official `se_extractor.get_se(..., vad=True)` with
+Silero v5.1 and a fresh temporary processed directory on every extraction.
+Official get_se still averages VAD-derived embeddings; changing the function
+alone is not a guaranteed improvement.
+
+The original full-recording/fixed-block bundle was rejected for poor quality;
+it must not be imported as an acceptable result. Extraction modules are a
+notebook-only add-on (`setup_runtime.py --extraction-only`) and do not affect the
+lightweight local service. OpenVoice imports Whisper libraries eagerly even in
+VAD mode; these imports are installed, but no Whisper transcription model is
+loaded. The ASR-free inference runtime remains unchanged.
 
 Edit `PHRASES` to include individual words and sentences you expect to select.
-The original test sentence is always generated:
+The notebook generates three short comparisons in both quality modes:
+`안녕하세요.`, `오늘은 날씨가 좋아요.`, `한국어 공부를 시작해 볼까요?`.
+Each has the MeloTTS base, source-to-source conversion, and cloned version.
+The original test sentence is also generated:
 
 > 안녕하세요. 오늘도 한국어 공부를 시작해 볼까요?
 
-Listen, then download `manhua-private.zip`. Exact punctuation and internal spaces
+Listen to the selected reference first, then compare both modes. Set the notebook's
+listening approval explicitly only if pronunciation, artifacts, pacing, and identity
+are satisfactory. Neither successful generation nor signal statistics approve a
+voice. Export is blocked by default. The approved bundle uses a NEW
+`manhua-private-quality-v2-<mode>.zip` filename; keep rejected assets untouched. Exact punctuation and internal spaces
 matter; matching normalizes Unicode NFC and trims outer whitespace only. More
 phrases can be prepared in a later session; importing a bundle merges its cache.
-Use a separate asset directory for a different speaker to avoid mixing voices.
+Use a NEW asset directory (launcher `-Assets`) for improved bundles too, so stale
+rejected phrases are not mixed into the new cache. Do not delete old private assets.
 
 ## 2. Start on Windows
 
@@ -93,7 +119,8 @@ A failed setup exits with an error; default cache mode remains usable. Remove on
 The server loads `private/target_se.pth` with tensor-only deserialization. It never
 needs the friend's raw WAV and no longer re-extracts the speaker on every startup.
 Concurrent live requests are rejected as busy (503) rather than running model
-inference simultaneously. Generated live audio is temporary and not cached to disk.
+inference simultaneously. Generated live audio is temporary and not cached to disk. Live synthesis now uses
+the natural preset by default; selected similarity mode applies to the prepared cache.
 The bundle's prepared cache is checked before model inference.
 
 Advanced manual startup from `voice_server` inside a prepared environment:
@@ -108,7 +135,12 @@ Migration from PR #6: `MANHUA_VOICE_REFERENCE` is replaced by the prepared embed
 To prepare manually in a compatible environment:
 
 ```text
-python prepare_voice.py --reference /private/openvoice_reference_korean_full.wav --checkpoints /models/checkpoints_v2 --output /private/manhua-private.zip --phrases /private/phrases.txt
+python prepare_voice.py --stage select --reference /private/openvoice_reference_korean_full.wav --work-dir /private/quality-v2
+# Listen to /private/quality-v2/selected_reference.wav before extraction.
+python prepare_voice.py --stage extract --checkpoints /models/checkpoints_v2 --work-dir /private/quality-v2
+python prepare_voice.py --stage compare --checkpoints /models/checkpoints_v2 --work-dir /private/quality-v2 --phrases /private/phrases.txt
+# Only after listening approval (otherwise reject BOTH modes):
+python prepare_voice.py --stage export --work-dir /private/quality-v2 --output /private/manhua-private-quality-v2-natural.zip --mode natural --accept-quality
 ```
 
 ## Can Kaggle serve Manhua Lens live?
@@ -166,3 +198,37 @@ Model-free tests use synthetic silence, never a person's recording. Notebook cel
 are syntax/format checked with no execution outputs. Neural synthesis, GPU speed,
 voice similarity, and the Kaggle upload/download UI require an actual private
 session; passing unit tests does not certify those.
+
+## Quality diagnosis and realistic limits
+
+The old pipeline fed almost all non-silent fixed 10-second blocks into extraction,
+without VAD, clipping/noise checks, or selection of calmer speech. Those are fixed
+pipeline weaknesses, not a proven explanation of every metallic artifact in the
+user's private sample. The previous speed 0.95 also slowed base speech uniformly.
+
+Natural mode uses Melo speed 1.0, sdp_ratio .2, noise .6/.8 and conversion tau .3.
+Experimental similarity mode uses speed .98, sdp_ratio .15, noise .5/.7 and tau .25.
+Tau is a conversion sampling parameter, NOT a calibrated speaker-similarity dial.
+Settings are reproducible, exposed in the engine/notebook report, and should be
+chosen by listening rather than assuming the similarity label makes it better.
+
+Compare the actual base/self/cloned samples to locate defects. Robotic base speech
+points to Melo prosody. Metallic self-conversion points to the conversion stage.
+Only cloned speech poor suggests reference/embedding or identity transfer mismatch.
+Metrics inspect duration, finite samples, RMS/peak, clipping, and silent-frame
+fraction. They do not measure perceptual speaker similarity. Matching the KR
+speaker, V2 converter, kr.pth finite values, shape, and SHA256 are recorded.
+
+OpenVoice clones tone color, not the reference's accent/emotion/pacing; expressive
+reference prosody will not be reproduced just by using a longer reference.
+[Official OpenVoice quality FAQ](https://github.com/myshell-ai/OpenVoice/blob/main/docs/QA.md).
+If neither preset meets the listening test, a reasonable free next experiment is
+[Chatterbox Multilingual](https://github.com/resemble-ai/chatterbox), which supports
+Korean `ko` and reference-prompt voice cloning. Run it in a separate private
+notebook/environment, not inside these dependency pins. Its result for this
+speaker is untested; English-only Turbo/Nano are not Korean replacements.
+
+In the same live notebook session, rerun helper/config to update public source,
+then selection/extraction/comparison independently. Setup checks readiness markers
+and only installs the VAD import add-on once. No reinstall is needed for normal
+quality iterations. A new Kaggle session requires rebuilding lost `/tmp` state.

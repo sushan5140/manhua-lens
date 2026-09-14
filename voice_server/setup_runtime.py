@@ -37,10 +37,21 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--torch-index", choices=["cpu", "cu121"], default="cpu")
     parser.add_argument("--checkpoints", type=Path, default=HERE / "OpenVoice/checkpoints_v2")
+    parser.add_argument("--extraction-only", action="store_true",
+                        help="Add official VAD extraction imports to an existing notebook runtime only")
     args = parser.parse_args()
     if sys.version_info[:2] != (3, 10) or sys.prefix == sys.base_prefix:
         raise SystemExit("Run this with Python 3.10 inside an isolated venv. See README.md.")
     pip = [sys.executable, "-m", "pip"]
+    if args.extraction_only:
+        # Whisper's setup imports pkg_resources; newer build-isolation setuptools
+        # dropped it. Use the known toolchain already used by the model runtime.
+        run(*pip, "install", "pip==24.3.1", "setuptools==69.5.1", "wheel==0.45.1")
+        run(*pip, "install", "--no-build-isolation", "-r", HERE / "requirements-extraction.txt",
+            "-c", HERE / "requirements-models.txt")
+        run(sys.executable, "-c", "from openvoice import se_extractor; print('Official extraction imports OK')")
+        (Path(sys.prefix) / "manhua-extraction-ready.txt").write_text("official-vad-v1", encoding="utf-8")
+        return
     run(*pip, "install", "pip==24.3.1", "setuptools==69.5.1", "wheel==0.45.1")
     run(*pip, "install", "torch==2.5.1", "torchaudio==2.5.1", "--index-url",
         "https://download.pytorch.org/whl/" + args.torch_index)
