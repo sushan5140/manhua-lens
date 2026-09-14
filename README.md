@@ -74,6 +74,15 @@ If a page does not respond to text selection, open Manhua Lens from Edge's Exten
 
 ## How it works
 
+### Optional custom Korean voice
+
+Prepare a consented voice using the free, private Kaggle/Colab notebook in
+[`voice_server/`](voice_server/README.md). The default Windows launcher plays
+prepared Korean phrases locally without WSL or ML dependencies; other phrases
+fall back to the installed device voice. Optional live cloning still requires
+local OpenVoice V2 + MeloTTS models. Never commit recordings, speaker embeddings,
+cloned audio, or executed notebook outputs.
+
 Manhua Lens uses a Manifest V3 service worker together with an in-page content script. The content script detects selected text and displays the reading panel, while the background worker handles dictionary lookup, translation requests, language processing, and text-to-speech.
 
 Bundled dictionaries allow individual-word results to remain available even when an online sentence-translation service cannot be reached.
