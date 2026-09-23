@@ -112,12 +112,28 @@
     wireHeaderControls(prefs);
     wireDragging();
     wireSentenceSpeak(text);
+    wireSpeechRate();
     requestLookup(text, prefs);
   }
 
   function wireSentenceSpeak(text) {
     const btn = document.getElementById("mhl-speak-sentence");
     if (btn) btn.addEventListener("click", () => speak(text, currentSourceLang));
+  }
+
+  // Keep the speaking-rate control beside the play button, where readers
+  // can actually use it without leaving the manhwa page. Both sentence
+  // and word playback already read this shared setting per request.
+  function wireSpeechRate() {
+    const select = document.getElementById("mhl-speech-rate");
+    if (!select) return;
+    select.addEventListener("change", async () => {
+      const rate = Number(select.value);
+      if (![0.75, 0.9, 1, 1.1, 1.25].includes(rate)) return;
+      preservePanelUntil = Date.now() + 1000;
+      await new Promise((resolve) => chrome.storage.sync.set({ speechRate: rate }, resolve));
+      preservePanelUntil = Date.now() + 350;
+    });
   }
 
   function renderSkeleton(text, prefs) {
@@ -153,6 +169,16 @@
         <p class="mhl-source">
           <span class="mhl-speak" id="mhl-speak-sentence">▶</span>
           <span id="mhl-source-phrase">${escapeHtml(text)}</span>
+          <label class="mhl-speed-control" title="Set speaking speed for sentences and words">
+            <span class="mhl-speed-caption">Pace</span>
+            <select id="mhl-speech-rate" aria-label="Speech speed">
+              <option value="0.75" ${Number(prefs.speechRate) === 0.75 ? "selected" : ""}>0.75× · Study</option>
+              <option value="0.9" ${Number(prefs.speechRate) === 0.9 ? "selected" : ""}>0.9× · Clear</option>
+              <option value="1" ${![0.75, 0.9, 1.1, 1.25].includes(Number(prefs.speechRate)) ? "selected" : ""}>1.0× · Natural</option>
+              <option value="1.1" ${Number(prefs.speechRate) === 1.1 ? "selected" : ""}>1.1× · Brisk</option>
+              <option value="1.25" ${Number(prefs.speechRate) === 1.25 ? "selected" : ""}>1.25× · Fast</option>
+            </select>
+          </label>
         </p>
         <div id="mhl-content">
           <p class="mhl-loading">Looking that up…</p>
@@ -413,7 +439,7 @@
 
   function getPrefs() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable" }, resolve);
+      chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable", speechRate: 1 }, resolve);
     });
   }
 
