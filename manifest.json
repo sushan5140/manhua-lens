@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Manhua Lens",
-  "version": "0.4.0",
-  "description": "Select text on any page for word-by-word definitions, readings, translation, and pronunciation, with optional local OpenVoice Korean speech.",
+  "version": "0.4.1",
+  "description": "Select text on any page for word-by-word definitions, readings, translation, and pronunciation, with Korean voice and pace selection (optional Azure or local OpenVoice).",
   "permissions": [
     "storage",
     "activeTab",
