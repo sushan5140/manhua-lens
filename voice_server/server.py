@@ -12,6 +12,7 @@ from openvoice import se_extractor
 from openvoice.api import ToneColorConverter
 
 from speech_text import prepare_speech_text
+from azure_speech import router as azure_router
 
 HERE = Path(__file__).resolve().parent
 OPENVOICE_ROOT = Path(os.environ.get("OPENVOICE_ROOT", HERE / "OpenVoice")).resolve()
@@ -36,6 +37,8 @@ app.add_middleware(
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )
+
+app.include_router(azure_router)
 
 class TTSRequest(BaseModel):
     text: str
