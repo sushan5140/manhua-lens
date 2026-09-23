@@ -363,3 +363,39 @@
   background: #fff;
   border-color: #111;
 }
+
+/* Korean voice and pace controls are both reachable while reading. */
+.mhl-audio-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 13px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef4fb;
+}
+.mhl-audio-tools label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1 1 126px;
+  margin: 0;
+  cursor: pointer;
+}
+.mhl-audio-tools label[hidden] { display: none !important; }
+.mhl-audio-tools select {
+  flex: 1 1 auto;
+  max-width: none;
+  min-width: 0;
+  padding: 5px 7px;
+  border: 1px solid #d5e2f3;
+  border-radius: 8px;
+  color: #244d7a;
+  background: #eff6ff;
+  font: 600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.mhl-audio-tools select:focus-visible { outline: 2px solid #2e5e99; outline-offset: 2px; }
+.mhl-theme-midnight .mhl-audio-tools { border-color: #29364c; }
+.mhl-theme-midnight .mhl-audio-tools select { background: #182b47; border-color: #344f70; color: #edf4ff; }
+.mhl-theme-contrast .mhl-audio-tools select { background: #fff; border-color: #111; color: #111; }
