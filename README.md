@@ -106,3 +106,9 @@ Manhua Lens is an **open-source manhwa, manga, and manhua reading assistant**, *
 Bug reports, language-data improvements, UI refinements, and feature suggestions are welcome through GitHub Issues.
 
 If you find Manhua Lens useful, starring the repository helps other readers and language learners discover the project through GitHub.
+
+## Optional Azure Korean voices
+
+The reader has a **Voice** selector beside **Pace** for Sun-Hi (female, `ko-KR-SunHiNeural`) and Hyunsu Multilingual (male, `ko-KR-HyunsuMultilingualNeural`), alongside the existing local/device voices. Existing installations continue to default to Auto. The five shared speech pace choices remain 0.75×, 0.9×, 1.0×, 1.1× and 1.25×.
+
+Azure voices require an Azure Speech resource key and region **on a localhost voice server**. Do not embed Azure subscription keys in public extensions. For installation and two-server options, see [voice_server/README.md](voice_server/README.md#azure-korean-voice-choices-sun-hi-and-hyunsu-multilingual). The voice selector is available immediately, but selecting Azure before configuring the voice server produces an explanatory message rather than silently playing the wrong voice.
