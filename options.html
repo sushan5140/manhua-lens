@@ -133,6 +133,16 @@
     <option value="wide">Wide</option>
   </select>
 
+  <label for="koreanVoice">Korean voice</label>
+  <select id="koreanVoice">
+    <option value="auto">Auto (existing voice)</option>
+    <option value="sunhi">Sun-Hi · female (Azure)</option>
+    <option value="hyunsu">Hyunsu Multilingual · male (Azure)</option>
+    <option value="melo">MeloTTS / OpenVoice · local</option>
+    <option value="device">Device Korean voice</option>
+  </select>
+  <p class="hint" style="margin: -9px 0 16px;">Azure voices require the local Azure voice server configured with your own Azure Speech key. Never put keys inside the extension.</p>
+
   <label for="speechRate">Speech speed</label>
   <select id="speechRate">
     <option value="0.75">0.75×</option>
