@@ -119,6 +119,7 @@
     wireDragging();
     wireSentenceSpeak(text);
     wireSpeechRate();
+    wireKoreanVoice();
     requestLookup(text, prefs);
   }
 
@@ -138,6 +139,16 @@
       if (![0.75, 0.9, 1, 1.1, 1.25].includes(rate)) return;
       preservePanelUntil = Date.now() + 1000;
       await new Promise((resolve) => chrome.storage.sync.set({ speechRate: rate }, resolve));
+      preservePanelUntil = Date.now() + 350;
+    });
+  }
+
+  function wireKoreanVoice() {
+    const select = document.getElementById("mhl-korean-voice");
+    if (!select) return;
+    select.addEventListener("change", async () => {
+      preservePanelUntil = Date.now() + 1000;
+      await new Promise((resolve) => chrome.storage.sync.set({ koreanVoice: select.value }, resolve));
       preservePanelUntil = Date.now() + 350;
     });
   }
@@ -175,6 +186,18 @@
         <p class="mhl-source">
           <span class="mhl-speak" id="mhl-speak-sentence">▶</span>
           <span id="mhl-source-phrase">${escapeHtml(text)}</span>
+        </p>
+        <div class="mhl-audio-tools" aria-label="Pronunciation settings">
+          <label class="mhl-voice-control" id="mhl-korean-voice-control" ${prefs.sourceLang !== "ko" && !/[가-힣]/.test(text) ? "hidden" : ""}>
+            <span class="mhl-speed-caption">Voice</span>
+            <select id="mhl-korean-voice" aria-label="Korean voice">
+              <option value="auto" ${!["melo", "device", "sunhi", "hyunsu"].includes(prefs.koreanVoice) ? "selected" : ""}>Auto · existing</option>
+              <option value="sunhi" ${prefs.koreanVoice === "sunhi" ? "selected" : ""}>Sun-Hi · female</option>
+              <option value="hyunsu" ${prefs.koreanVoice === "hyunsu" ? "selected" : ""}>Hyunsu · male</option>
+              <option value="melo" ${prefs.koreanVoice === "melo" ? "selected" : ""}>MeloTTS · local</option>
+              <option value="device" ${prefs.koreanVoice === "device" ? "selected" : ""}>Device voice</option>
+            </select>
+          </label>
           <label class="mhl-speed-control" title="Set speaking speed for sentences and words">
             <span class="mhl-speed-caption">Pace</span>
             <select id="mhl-speech-rate" aria-label="Speech speed">
@@ -185,7 +208,7 @@
               <option value="1.25" ${Number(prefs.speechRate) === 1.25 ? "selected" : ""}>1.25× · Fast</option>
             </select>
           </label>
-        </p>
+        </div>
         <div id="mhl-content">
           <p class="mhl-loading">Looking that up…</p>
         </div>
@@ -235,6 +258,7 @@
       await setPrefs(p);
       currentSourceLang = lang;
       document.getElementById("mhl-src-label").textContent = LABELS[lang];
+      document.getElementById("mhl-korean-voice-control").hidden = lang !== "ko";
       requestLookup(currentSelectionText, p);
     });
 
@@ -436,7 +460,7 @@
     contentEl.querySelector(".mhl-speech-error")?.remove();
     const warning = document.createElement("p");
     warning.className = "mhl-error mhl-speech-error";
-    warning.textContent = `${message} Add the language in Windows speech settings, then reload the extension.`;
+    warning.textContent = message;
     contentEl.prepend(warning);
     setTimeout(() => warning.remove(), 5000);
   }
@@ -445,7 +469,7 @@
 
   function getPrefs() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable", speechRate: 1 }, resolve);
+      chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable", speechRate: 1, koreanVoice: "auto" }, resolve);
     });
   }
 
