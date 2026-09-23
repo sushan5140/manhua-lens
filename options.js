@@ -3,18 +3,21 @@ const targetSelect = document.getElementById("targetLang");
 const themeSelect = document.getElementById("theme");
 const panelSizeSelect = document.getElementById("panelSize");
 const speechRateSelect = document.getElementById("speechRate");
+const koreanVoiceSelect = document.getElementById("koreanVoice");
 const connectionStatus = document.getElementById("connectionStatus");
 const activateButton = document.getElementById("activatePage");
 let activeTabId = null;
 
 document.getElementById("version").textContent = chrome.runtime.getManifest().version;
 
-chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable", speechRate: 1 }, (prefs) => {
+chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable", speechRate: 1, koreanVoice: "auto" }, (prefs) => {
   sourceSelect.value = prefs.sourceLang;
   targetSelect.value = prefs.targetLang;
   themeSelect.value = prefs.theme;
   panelSizeSelect.value = prefs.panelSize;
   speechRateSelect.value = String(prefs.speechRate);
+  koreanVoiceSelect.value = prefs.koreanVoice;
+  if (!koreanVoiceSelect.value) koreanVoiceSelect.value = "auto";
   // An unexpected stored value falls back to natural 1.0× speech.
   if (!speechRateSelect.value) speechRateSelect.value = "1";
 });
@@ -33,6 +36,10 @@ themeSelect.addEventListener("change", () => {
 
 panelSizeSelect.addEventListener("change", () => {
   chrome.storage.sync.set({ panelSize: panelSizeSelect.value });
+});
+
+koreanVoiceSelect.addEventListener("change", () => {
+  chrome.storage.sync.set({ koreanVoice: koreanVoiceSelect.value });
 });
 
 speechRateSelect.addEventListener("change", () => {
