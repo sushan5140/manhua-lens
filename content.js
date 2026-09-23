@@ -103,6 +103,12 @@
     popupEl.addEventListener(
       "mousedown",
       (e) => {
+        // Native selects need their default mousedown action to open the
+        // menu; preserve the selected text/panel while a reader picks a pace.
+        if (e.target.closest("select, option, input, textarea")) {
+          preservePanelUntil = Date.now() + 15000;
+          return;
+        }
         preservePanelUntil = Date.now() + 500;
         e.preventDefault();
       },
