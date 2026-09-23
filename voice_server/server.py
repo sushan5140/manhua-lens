@@ -11,6 +11,8 @@ from melo.api import TTS
 from openvoice import se_extractor
 from openvoice.api import ToneColorConverter
 
+from speech_text import prepare_speech_text
+
 HERE = Path(__file__).resolve().parent
 OPENVOICE_ROOT = Path(os.environ.get("OPENVOICE_ROOT", HERE / "OpenVoice")).resolve()
 CHECKPOINT_ROOT = Path(os.environ.get("OPENVOICE_CHECKPOINTS", OPENVOICE_ROOT / "checkpoints_v2")).resolve()
@@ -19,6 +21,12 @@ REFERENCE_AUDIO = Path(os.environ.get("MANHUA_VOICE_REFERENCE", HERE / "voice_re
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 CONVERTER_DIR = CHECKPOINT_ROOT / "converter"
 SES_DIR = CHECKPOINT_ROOT / "base_speakers" / "ses"
+
+# MeloTTS Korean at 0.95 measures ~5 syllables/s of articulation with
+# ~0.8-1.2 s pauses at sentence ends: native conversational reading pace.
+# Do not raise this to speed speech up; playback speed is chosen in the
+# extension and applied (pitch-preserved) only at playback time.
+KOREAN_SPEED = 0.95
 
 app = FastAPI(title="Manhua Lens Korean Voice", version="1.0")
 app.add_middleware(
@@ -83,7 +91,7 @@ def health():
 
 @app.post("/tts")
 def tts(payload: TTSRequest):
-    text = payload.text.strip()
+    text = prepare_speech_text(payload.text)
     if not text:
         raise HTTPException(status_code=400, detail="Text is empty.")
     if len(text) > 400:
@@ -98,7 +106,7 @@ def tts(payload: TTSRequest):
             text,
             speaker_id,
             str(source_path),
-            speed=0.95,
+            speed=KOREAN_SPEED,
         )
 
         tone_color_converter.convert(

@@ -108,24 +108,86 @@ const LANGUAGE_NAMES = {
 const OPENVOICE_ENDPOINT = "http://127.0.0.1:8765/tts";
 const OFFSCREEN_DOCUMENT = "offscreen.html";
 
+// ---------- speech pacing ----------
+// Every engine already speaks at a native conversational rate at 1.0
+// (chrome.tts rate 1.0 is the voice's own default; the OpenVoice server
+// synthesizes at MeloTTS's natural Korean pace). The rate is always
+// passed explicitly and read fresh for each request, so it can never
+// accumulate across replays, voices, or languages.
+const SPEECH_RATES = [0.75, 0.9, 1, 1.1, 1.25];
+const DEFAULT_SPEECH_RATE = 1;
+
+function normalizeSpeechRate(value) {
+  const rate = Number(value);
+  return SPEECH_RATES.includes(rate) ? rate : DEFAULT_SPEECH_RATE;
+}
+
+async function getSpeechRate() {
+  try {
+    const prefs = await chrome.storage.sync.get({ speechRate: DEFAULT_SPEECH_RATE });
+    return normalizeSpeechRate(prefs.speechRate);
+  } catch {
+    return DEFAULT_SPEECH_RATE;
+  }
+}
+
+// Manhwa/manga dialogue is usually selected across speech bubbles or
+// wrapped lines with no punctuation between them. Speech engines treat
+// a bare line break as a space, so separate bubbles were read as one
+// breathless run-on sentence. Give each line break a light clause pause
+// and each blank-line break a sentence pause, using the punctuation each
+// language's engine expects. Existing punctuation is left untouched.
+const PAUSE_MARKS = {
+  ja: { clause: "、", sentence: "。", joiner: "" },
+  zh: { clause: "，", sentence: "。", joiner: "" },
+  default: { clause: ",", sentence: ".", joiner: " " }
+};
+const TRAILING_CLOSERS = /[\s"'”’」』）)\]】》〉]+$/u;
+const ENDS_WITH_PAUSE = /[.!?…,;:~\-—、。，！？；：～]$/u;
+
+function prepareSpeechText(text, lang) {
+  const marks = PAUSE_MARKS[lang] || PAUSE_MARKS.default;
+  const endsWithPause = (line) => ENDS_WITH_PAUSE.test(line.replace(TRAILING_CLOSERS, ""));
+  const withPause = (line, mark) => (endsWithPause(line) ? line : line + mark);
+
+  const paragraphs = String(text || "")
+    .replace(/\r\n?/g, "\n")
+    .split(/\n[ \t 　]*\n\s*/)
+    .map((paragraph) => paragraph
+      .split("\n")
+      .map((line) => line.replace(/[ \t 　]+/g, " ").trim())
+      .filter(Boolean))
+    .filter((lines) => lines.length > 0);
+
+  return paragraphs
+    .map((lines, p) => lines
+      .map((line, i) => {
+        if (i < lines.length - 1) return withPause(line, marks.clause);
+        return p < paragraphs.length - 1 ? withPause(line, marks.sentence) : line;
+      })
+      .join(marks.joiner))
+    .join(marks.joiner);
+}
+
 async function handleBestSpeak(text, lang) {
-  const cleanText = String(text || "").trim();
+  const cleanText = prepareSpeechText(text, lang);
   if (!cleanText) throw new Error("There is no text to pronounce.");
+  const rate = await getSpeechRate();
 
   if (lang === "ko") {
     try {
       const audioBase64 = await synthesizeOpenVoiceKorean(cleanText);
-      await playExtensionAudio(audioBase64, "audio/wav");
-      return { voice: "openvoice" };
+      await playExtensionAudio(audioBase64, "audio/wav", rate);
+      return { voice: "openvoice", rate };
     } catch (err) {
       console.warn("Manhua Lens: local OpenVoice unavailable; using device Korean voice.", err);
-      await handleSpeak(cleanText, lang);
-      return { voice: "device", fallback: true };
+      await handleSpeak(cleanText, lang, rate);
+      return { voice: "device", fallback: true, rate };
     }
   }
 
-  await handleSpeak(cleanText, lang);
-  return { voice: "device" };
+  await handleSpeak(cleanText, lang, rate);
+  return { voice: "device", rate };
 }
 
 async function synthesizeOpenVoiceKorean(text) {
@@ -165,12 +227,13 @@ async function ensureOffscreenDocument() {
   });
 }
 
-async function playExtensionAudio(audioBase64, mimeType) {
+async function playExtensionAudio(audioBase64, mimeType, rate = DEFAULT_SPEECH_RATE) {
   await ensureOffscreenDocument();
   const response = await chrome.runtime.sendMessage({
     type: "MHL_PLAY_AUDIO",
     audioBase64,
-    mimeType
+    mimeType,
+    playbackRate: normalizeSpeechRate(rate)
   });
 
   if (!response?.ok) {
@@ -178,7 +241,7 @@ async function playExtensionAudio(audioBase64, mimeType) {
   }
 }
 
-async function handleSpeak(text, lang) {
+async function handleSpeak(text, lang, rate = DEFAULT_SPEECH_RATE) {
   const cleanText = String(text || "").trim();
   if (!cleanText) throw new Error("There is no text to pronounce.");
   if (lang === "la") throw new Error("Latin pronunciation is not available through Windows speech voices.");
@@ -192,7 +255,8 @@ async function handleSpeak(text, lang) {
   }
 
   chrome.tts.stop();
-  const options = { lang: targetLang };
+  // rate 1.0 is the voice's own natural default; pitch is left to the voice.
+  const options = { lang: targetLang, rate: normalizeSpeechRate(rate) };
   if (voice?.voiceName) options.voiceName = voice.voiceName;
 
   // chrome.tts.speak() resolves when speech is accepted, not when it has

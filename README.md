@@ -26,7 +26,7 @@ It can be useful for:
 - Sentence translation alongside individual word results
 - Romanized readings and part-of-speech information where available
 - Korean particle splitting and grammar labels
-- Sentence and individual-word pronunciation using the browser text-to-speech API
+- Sentence and individual-word pronunciation using the browser text-to-speech API at natural 1.0× conversational pace by default, with pauses kept between speech bubbles (optional 0.75×–1.25× speech speed setting)
 - Works on regular webpages and embedded frames
 - Bundled offline dictionaries for resilient word lookup
 - Graceful offline results when the online sentence-translation service is unavailable

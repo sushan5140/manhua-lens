@@ -2,17 +2,21 @@ const sourceSelect = document.getElementById("sourceLang");
 const targetSelect = document.getElementById("targetLang");
 const themeSelect = document.getElementById("theme");
 const panelSizeSelect = document.getElementById("panelSize");
+const speechRateSelect = document.getElementById("speechRate");
 const connectionStatus = document.getElementById("connectionStatus");
 const activateButton = document.getElementById("activatePage");
 let activeTabId = null;
 
 document.getElementById("version").textContent = chrome.runtime.getManifest().version;
 
-chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable" }, (prefs) => {
+chrome.storage.sync.get({ sourceLang: "ko", targetLang: "en", theme: "paper", panelSize: "comfortable", speechRate: 1 }, (prefs) => {
   sourceSelect.value = prefs.sourceLang;
   targetSelect.value = prefs.targetLang;
   themeSelect.value = prefs.theme;
   panelSizeSelect.value = prefs.panelSize;
+  speechRateSelect.value = String(prefs.speechRate);
+  // An unexpected stored value falls back to natural 1.0× speech.
+  if (!speechRateSelect.value) speechRateSelect.value = "1";
 });
 
 sourceSelect.addEventListener("change", () => {
@@ -29,6 +33,10 @@ themeSelect.addEventListener("change", () => {
 
 panelSizeSelect.addEventListener("change", () => {
   chrome.storage.sync.set({ panelSize: panelSizeSelect.value });
+});
+
+speechRateSelect.addEventListener("change", () => {
+  chrome.storage.sync.set({ speechRate: Number(speechRateSelect.value) });
 });
 
 function setConnectionStatus(message, isError = false) {

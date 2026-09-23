@@ -23,6 +23,12 @@ OpenVoice V2 officially documents Linux/Python 3.9 as its primary developer setu
 
 Check `http://127.0.0.1:8765/health`. Manhua Lens automatically uses this voice for Korean. If the server is offline, it falls back to the installed device Korean voice.
 
+## Speech pacing
+
+The server synthesizes at `KOREAN_SPEED = 0.95` in `server.py`, which measures about 5 syllables per second with natural pauses at sentence ends (native conversational reading pace). Keep it there: the Speech speed setting in the extension is applied only at playback time, with pitch preserved, and defaults to 1.0×.
+
+Text selected across speech bubbles often has line breaks but no punctuation. `speech_text.py` turns each line break into a short clause pause and each blank line into a sentence pause, so bubbles are not read as one run-on sentence.
+
 ## ChatGPT study flow
 
 Manhua Lens already injects into normal webpages. On ChatGPT, select a Korean word or phrase, use the Manhua Lens speaker control, and the extension requests this local service. Audio plays in an extension offscreen document so page CSP restrictions do not block it.
