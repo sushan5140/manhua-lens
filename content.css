@@ -325,3 +325,41 @@
 .mhl-theme-contrast .mhl-headword,
 .mhl-theme-contrast .mhl-sentence-translation,
 .mhl-theme-contrast .mhl-def { color: #000; }
+
+/* On-page pronunciation pace, shared by the sentence and word play buttons. */
+.mhl-source #mhl-source-phrase { min-width: 0; overflow-wrap: anywhere; }
+.mhl-speed-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+.mhl-speed-caption { font-size: 10px; font-weight: 600; color: #5C7B9C; }
+.mhl-speed-control select {
+  max-width: 124px;
+  min-width: 77px;
+  padding: 4px 5px;
+  border: 1px solid #d5e2f3;
+  border-radius: 8px;
+  color: #244d7a;
+  background: #eff6ff;
+  font: 600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+  outline-offset: 2px;
+}
+.mhl-speed-control select:focus-visible { outline: 2px solid #2e5e99; }
+.mhl-theme-midnight .mhl-speed-caption { color: #9cadc3; }
+.mhl-theme-midnight .mhl-speed-control select {
+  background: #182b47;
+  border-color: #344f70;
+  color: #edf4ff;
+}
+.mhl-theme-contrast .mhl-speed-control select {
+  color: #111;
+  background: #fff;
+  border-color: #111;
+}
