@@ -106,6 +106,8 @@ const LANGUAGE_NAMES = {
 };
 
 const OPENVOICE_ENDPOINT = "http://127.0.0.1:8765/tts";
+const AZURE_ENDPOINT = "http://127.0.0.1:8765/azure-tts";
+const KOREAN_VOICE_IDS = ["auto", "melo", "device", "sunhi", "hyunsu"];
 const OFFSCREEN_DOCUMENT = "offscreen.html";
 
 // ---------- speech pacing ----------
@@ -175,6 +177,21 @@ async function handleBestSpeak(text, lang) {
   const rate = await getSpeechRate();
 
   if (lang === "ko") {
+    const prefs = await chrome.storage.sync.get({ koreanVoice: "auto" });
+    const selected = KOREAN_VOICE_IDS.includes(prefs.koreanVoice) ? prefs.koreanVoice : "auto";
+
+    if (selected === "sunhi" || selected === "hyunsu") {
+      // Azure credentials stay server-side. Never request or store them in
+      // the browser extension, which is publicly inspectable by design.
+      const audioBase64 = await synthesizeAzureKorean(cleanText, selected);
+      await playExtensionAudio(audioBase64, "audio/wav", rate);
+      return { voice: selected, rate };
+    }
+    if (selected === "device") {
+      await handleSpeak(cleanText, lang, rate);
+      return { voice: "device", rate };
+    }
+
     try {
       const audioBase64 = await synthesizeOpenVoiceKorean(cleanText);
       await playExtensionAudio(audioBase64, "audio/wav", rate);
@@ -188,6 +205,27 @@ async function handleBestSpeak(text, lang) {
 
   await handleSpeak(cleanText, lang, rate);
   return { voice: "device", rate };
+}
+
+async function synthesizeAzureKorean(text, voice) {
+  const response = await fetch(AZURE_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice }),
+    signal: AbortSignal.timeout(45000)
+  }).catch(() => {
+    throw new Error("Azure voice server is offline. Start voice_server/azure_server.py or the OpenVoice server on port 8765.");
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(typeof payload.detail === "string" ? payload.detail : `Azure voice request failed: ${response.status}`);
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
 }
 
 async function synthesizeOpenVoiceKorean(text) {
