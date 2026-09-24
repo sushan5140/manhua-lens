@@ -66,7 +66,7 @@ test("real browser: freeform intervention, character memory, fork, compare, relo
   assert.doesNotMatch(await page.locator("#facts").textContent(),/In your possession/);
   assert.equal(await page.locator(".chat-bubble").count(),0);
   await page.locator("#compare-toggle").click();
-  await page.locator("#comparison-grid").filter({hasText:"silver key"}).waitFor();
+  await page.locator("#comparison-grid").filter({hasText:"Key: held"}).waitFor();
   assert.match(await page.locator("#comparison-grid").textContent(),/diverge/);
 
   // New actual intervention, independent state.
