@@ -426,19 +426,29 @@ def act(world, text):
         result = offline_action(text,state)
     else:
         context = {"facts":state, "events":trimmed_branch(branch), "action":text}
-        raw = call_llm([{"role":"system","content":SYSTEM},
-                        {"role":"user","content":json.dumps(context,ensure_ascii=False)}],json_mode=True)
-        try:
-            start, end = raw.index("{"), raw.rindex("}")+1
-            result = json.loads(raw[start:end])
-            normalize_event({**result,"text":text,"type":"action"})
-            reason = illegal_transition(result["scene"],result.get("changes",{}),state)
-            if reason:
-                raise ValueError(reason)
-            result["mode"] = mode
-        except (ValueError, KeyError, TypeError) as exc:
-            raise ValueError("AI response did not preserve world continuity; no change was saved. " +
-                             str(exc)[:180]) from None
+        for attempt in range(2):
+            raw = call_llm([{"role":"system","content":SYSTEM},
+                            {"role":"user","content":json.dumps(context,ensure_ascii=False)}],
+                           json_mode=True)
+            try:
+                start, end = raw.index("{"), raw.rindex("}")+1
+                result = json.loads(raw[start:end])
+                normalize_event({**result,"text":text,"type":"action"})
+                reason = illegal_transition(result["scene"],result.get("changes",{}),state)
+                if reason:
+                    raise ValueError(reason)
+                result["mode"] = mode
+                break
+            except (ValueError, KeyError, TypeError) as exc:
+                if attempt == 0:
+                    context["retry_instruction"] = (
+                        "Your previous JSON was rejected for this exact reason: " +
+                        str(exc)[:180] + ". Regenerate a complete, CAUSALLY VALID JSON "
+                        "for the user's action without inventing prior items/evidence.")
+                    continue
+                raise ValueError(
+                    "AI response did not preserve world continuity after retry; "
+                    "no change was saved. " + str(exc)[:180]) from None
     new_event = {"type":"action","text":text,"scene":result["scene"],
                  "title":result["title"],"narrative":result["narrative"],
                  "changes":result.get("changes",{}),"options":result.get("options",[]),
