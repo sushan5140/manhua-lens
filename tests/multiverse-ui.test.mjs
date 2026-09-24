@@ -47,3 +47,23 @@ test("responsive, readable, reduced-motion behavior exists", () => {
   assert.match(css, /prefers-reduced-motion:reduce/);
   assert.match(css, /:focus-visible/);
 });
+
+
+test("top horizontal timeline and side-by-side dialogue follow scene hierarchy", () => {
+  const timeline = html.indexOf('id="timeline"');
+  const duo = html.indexOf('class="reader-duo"');
+  const scene = html.indexOf('class="scene-card"');
+  const talk = html.indexOf('id="conversation"');
+  assert.ok(timeline > 0 && timeline < duo && duo < scene && scene < talk);
+  assert.match(css,/\.reader-duo\{display:grid;grid-template-columns:/);
+  assert.match(css,/\.journey \.timeline\{display:flex;overflow-x:auto/);
+  assert.match(css,/@media\(max-width:800px\)\{\.journey/);
+});
+test("Yumi cover is a clearly marked external reference, not imported story art", () => {
+  assert.match(html,/class="official-cover"/);
+  assert.match(html,/Original art © Donggeon Lee/);
+  assert.match(html,/COVER REFERENCE ONLY/);
+  assert.match(html,/not licensed for our product/);
+  assert.match(js,/cover-error/);
+  assert.doesNotMatch(html,/art\/yumi\.svg/);
+});
