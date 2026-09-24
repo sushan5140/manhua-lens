@@ -2,98 +2,78 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f8f4ee">
-  <meta name="description" content="An interactive original-story multiverse. Change a choice, meet the characters, and see what survives in another timeline.">
-  <title>Manhua Multiverse — The Stolen Tomorrow</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#faf7f3">
+  <meta name="description" content="Enter an original illustrated story, talk to characters, change decisions, and fork your own timeline.">
+  <title>Manhua Multiverse · The Stolen Tomorrow</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <div class="page">
-    <header class="topbar">
-      <a class="wordmark" href="./index.html" aria-label="Manhua Multiverse home"><span class="mark">M<span>✦</span></span><span>MANHUA<br>MULTIVERSE</span></a>
-      <div class="topright"><span class="eyebrow">A STORY THAT REMEMBERS YOU</span><button id="restart" class="quiet" type="button">Start over ↗</button></div>
-    </header>
-
-    <section class="intro">
-      <div><div class="micro"><span class="pulse"></span> AN INTERACTIVE STORY EXPERIMENT · V0</div>
-        <h1>What if the <em>story</em><br>remembered <i>you?</i></h1>
-        <p>Meet the people inside a story. Change what happened. Step into a different tomorrow without erasing the one you left behind.</p></div>
-      <div class="intro-stat" aria-label="Original fiction preview"><span>01</span><div>ORIGINAL<br>STORY WORLD<br><b>∞ POSSIBLE PATHS</b></div></div>
+  <a class="skip" href="#experience">Skip to story</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./index.html" aria-label="Manhua Multiverse home">
+        <span class="brand-symbol" aria-hidden="true">✦</span><span>MANHUA <strong>MULTIVERSE</strong><small>EVERY CHOICE OPENS A WORLD</small></span>
+      </a>
+      <nav class="header-nav" aria-label="Page sections"><a class="nav-current" href="#experience">Read the story</a><a href="#conversation">Talk to characters</a><a href="#worlds">Discover worlds</a></nav>
+      <span class="header-label"><span class="status-dot"></span> ORIGINAL STORY · V1 PREVIEW</span>
+    </div>
+  </header>
+  <div class="shell">
+    <section class="page-intro" aria-label="Introduction">
+      <div><div class="eyebrow"><span class="eyebrow-line"></span> THE STOLEN TOMORROW</div><h1>Don't just read the story.<br><em>Change what happens next.</em></h1><p>Read one scene, make your choice, and ask the characters what they think. Every decision belongs to its own timeline.</p></div>
+      <div class="intro-note"><span>01 / 01</span><b>An original world.<br>Many possible tomorrows.</b><small>Your story saves in this browser.</small></div>
     </section>
-
-
-    <section class="official-worlds" aria-label="Real Korean webcomics being considered for a permissions-based pilot">
-      <div class="official-worlds-heading">
-        <div><span class="section-label">REAL MANHWA / PERMISSIONS STAGE</span><h2>Worlds we hope to explore <em>with permission.</em></h2></div>
-        <p>Read these real Korean webcomics on their official platforms. Only our original story is interactive here; no copyrighted panels, character simulations, or alternative storylines have been imported.</p>
-      </div>
-      <div class="official-grid">
-        <article class="official-card">
-          <span class="official-art art-cells" aria-hidden="true">01<span>◌</span></span>
-          <div class="official-info"><span class="official-source">WEBTOON ORIGINAL · DONGGEON LEE</span><h3>Yumi's Cells</h3><p>A character- and memory-focused candidate for a permissioned interactive pilot.</p><span class="rights-pending">Rights request pending · not playable here</span><a class="official-link" href="https://www.webtoons.com/en/slice-of-life/yumi-cell/list?title_no=478" target="_blank" rel="noopener noreferrer">Read on official WEBTOON ↗</a></div>
-        </article>
-        <article class="official-card">
-          <span class="official-art art-tower" aria-hidden="true">02<span>◇</span></span>
-          <div class="official-info"><span class="official-source">WEBTOON ORIGINAL · SIU</span><h3>Tower of God</h3><p>A fantasy-world candidate for testing choices, consequences, and character knowledge.</p><span class="rights-pending">Rights request pending · not playable here</span><a class="official-link" href="https://www.webtoons.com/en/fantasy/tower-of-god/list?title_no=95" target="_blank" rel="noopener noreferrer">Read on official WEBTOON ↗</a></div>
-        </article>
-        <article class="official-card">
-          <span class="official-art art-hourglass" aria-hidden="true">03<span>⌛</span></span>
-          <div class="official-info"><span class="official-source">TAPAS · ANTSTUDIO / SANSOBEE</span><h3>The Villainess Turns the Hourglass</h3><p>A time-travel candidate for exploring what changes when a character makes another choice.</p><span class="rights-pending">Rights request pending · not playable here</span><a class="official-link" href="https://tapas.io/series/the-villainess-turns-the-hourglass/info" target="_blank" rel="noopener noreferrer">Read on official Tapas ↗</a></div>
-        </article>
-      </div>
-    </section>
-
-    <main class="workspace">
-      <section class="scene-panel" aria-label="Interactive story">
-        <div class="scene-art station" id="scene-art">
-          <div class="art-haze" aria-hidden="true"></div><div class="orb orb-one" aria-hidden="true"></div><div class="orb orb-two" aria-hidden="true"></div>
-          <div class="art-caption"><span class="pill" id="chapter">PROLOGUE / 00</span><span class="art-index" id="scene-number">001 — THE STOLEN TOMORROW</span></div>
-          <div class="art-center" aria-hidden="true"><span class="art-symbol" id="art-symbol">十三</span><span class="art-rail"></span></div>
-          <span class="art-bottom" id="scene-location">SEOUL · ONE MINUTE BEFORE MIDNIGHT</span>
-        </div>
-        <div class="story-copy">
-          <span class="section-label">THE STOLEN TOMORROW <span class="slash">/</span> LIVE TIMELINE</span>
-          <h2 id="scene-title">The thirteenth platform</h2>
-          <p id="scene-text" class="story-text"></p>
-          <blockquote id="scene-line"></blockquote>
-          <div class="decision-heading"><span id="decision-title">WHAT DO YOU DO?</span><span id="choice-count">02 PATHS</span></div>
-          <div id="choices" class="choices" aria-live="polite"></div>
-          <div id="ending-actions" class="ending-actions" hidden><span>Every ending leaves a door behind.</span><button id="fork-ending" class="accent" type="button">Try another timeline ↗</button></div>
-        </div>
-      </section>
-
-      <aside class="side">
-        <section class="card timeline-card">
-          <div class="card-head"><span class="section-label">YOUR MULTIVERSE</span><span id="branch-count" class="counter">01 WORLD</span></div>
-          <h3>One choice.<br><em>Many lives.</em></h3>
-          <label class="select-caption" for="branch-select">ACTIVE TIMELINE</label>
-          <select id="branch-select" aria-label="Choose saved timeline"></select>
-          <div id="timeline" class="timeline"></div>
-          <p class="hint">Fork any moment to make a different choice. Your original timeline stays intact.</p>
-        </section>
-
-        <section class="card dialogue-card">
-          <div class="card-head"><span class="section-label">BEHIND THE PANELS</span><span class="counter">02 CHARACTERS</span></div>
-          <h3>Ask them <em>why.</em></h3>
-          <p class="card-sub">Their answers reflect the choices you've made in this timeline.</p>
-          <div class="cast" role="group" aria-label="Choose a character">
-            <button class="cast-member selected" type="button" data-character="sori" aria-pressed="true"><span class="avatar sori">소</span><span><strong>Sori</strong><small>THE ARCHIVIST</small></span></button>
-            <button class="cast-member" type="button" data-character="jae" aria-pressed="false"><span class="avatar jae">재</span><span><strong>Jae</strong><small>THE COURIER</small></span></button>
-          </div>
-          <div id="character-bio" class="character-bio"></div>
-          <div id="questions" class="questions"></div>
-          <div id="reply" class="reply" role="status" aria-live="polite"><span>Choose a question to hear their side of the story.</span></div>
-          <p class="demo-note">✦ V0 dialogue is authored and state-aware, not live AI chat.</p>
-        </section>
-
-        <section class="about-card">
-          <div class="about-symbol">↝</div>
-          <div><strong>Built for curious readers.</strong><p>Original fiction, local timelines, no signup or scraped comic panels. Reading tools from Manhua Lens can connect here later.</p></div>
-        </section>
+    <div class="reader-layout">
+      <aside class="journey" id="journey" aria-label="Your story timeline">
+        <div class="journey-head"><span class="section-kicker">YOUR STORY</span><span class="small-diamond">✦</span></div>
+        <h2>The Stolen<br><em>Tomorrow</em></h2>
+        <p class="journey-sub">A city loses one minute. Your choices determine where it goes.</p>
+        <div class="timeline-top"><span class="section-kicker">CURRENT PATH</span><span id="branch-count">01 TIMELINE</span></div>
+        <div class="select-wrap"><label class="sr-only" for="branch-select">Switch timeline</label><select id="branch-select"></select></div>
+        <div id="timeline" class="timeline" aria-live="polite"></div>
+        <p class="timeline-help">Tap <b>Branch here</b> at any moment to create another version of the story. The first timeline stays safe.</p>
+        <button class="reset-btn" id="restart" type="button"><span aria-hidden="true">↺</span> Start a new story</button>
       </aside>
-    </main>
-    <footer><span>MANHUA MULTIVERSE <span class="slash">/</span> AN ORIGINAL EXPERIMENT</span><span id="save-status">Your choices stay in this browser.</span></footer>
+      <main class="main-column" id="experience">
+        <div class="reading-progress"><span><span class="status-dot"></span> CURRENT SCENE</span><div><span id="scene-number">SCENE 01</span><span class="progress-divider">/</span><span>THE STOLEN TOMORROW</span></div></div>
+        <article class="scene-card" aria-labelledby="scene-title">
+          <div class="scene-media">
+            <img id="scene-image" src="./art/station.svg" alt="Original illustrated scene of Sori and Jae on the thirteenth platform in Seoul." width="1200" height="580" fetchpriority="high">
+            <div class="media-top"><span id="chapter" class="media-pill">PROLOGUE / 00</span><span id="scene-location" class="media-location">SEOUL · ONE MINUTE BEFORE MIDNIGHT</span></div>
+            <div class="media-credit">ORIGINAL FICTION & ILLUSTRATION · MANHUA MULTIVERSE</div>
+          </div>
+          <div class="story-body"><div class="story-overline"><span class="section-kicker">THE SCENE</span><span id="scene-step">YOUR FIRST CHOICE</span></div>
+            <h2 id="scene-title">The thirteenth platform</h2><p id="scene-text" class="scene-text"></p><blockquote id="scene-line"></blockquote>
+            <div class="choice-header"><div><span class="section-kicker">YOUR MOVE</span><h3 id="decision-title">What happens next?</h3></div><span id="choice-count" class="choice-count">02 PATHS</span></div>
+            <div id="choices" class="choices" aria-live="polite"></div>
+            <div id="ending-actions" class="ending-actions" hidden><span>You reached an ending. The story can still change.</span><button id="fork-ending" type="button" class="ending-fork">Try a different choice <span aria-hidden="true">↗</span></button></div>
+          </div>
+        </article>
+        <section id="conversation" class="conversation" aria-labelledby="conversation-title">
+          <div class="conversation-intro"><div><span class="section-kicker">BEHIND THE PANELS</span><h2 id="conversation-title">Ask them <em>before you decide.</em></h2><p>The characters answer from <strong>this timeline</strong>, not from another version of your story.</p></div><span class="conversation-badge">02 CHARACTERS</span></div>
+          <div class="talk-layout">
+            <div class="talk-controls">
+              <div class="cast" role="group" aria-label="Choose character">
+                <button type="button" class="cast-member selected" data-character="sori" aria-pressed="true"><span class="portrait sori" aria-hidden="true"></span><span class="cast-name">Sori<small>The Archivist</small></span><span class="cast-chevron" aria-hidden="true">↗</span></button>
+                <button type="button" class="cast-member" data-character="jae" aria-pressed="false"><span class="portrait jae" aria-hidden="true"></span><span class="cast-name">Jae<small>The Courier</small></span><span class="cast-chevron" aria-hidden="true">↗</span></button>
+              </div>
+              <p id="character-bio" class="character-bio"></p>
+              <span class="questions-label">WHAT WOULD YOU LIKE TO ASK?</span>
+              <div id="questions" class="questions"></div>
+            </div>
+            <div class="talk-reply"><div class="reply-heading"><span class="reply-icon" aria-hidden="true">❝</span><span id="reply-person">SORI · HER SIDE OF THE STORY</span></div><div id="reply" class="reply" role="status" aria-live="polite"></div><div class="talk-disclosure"><span class="status-dot"></span> Authored, decision-aware dialogue · Free-form AI chat is not enabled yet.</div></div>
+          </div>
+        </section>
+        <div class="micro-footer"><span id="save-status">Your decisions are stored in this browser.</span><span>YOUR UNIVERSE IS YOURS TO EXPLORE ↗</span></div>
+      </main>
+    </div>
+    <section id="worlds" class="worlds" aria-labelledby="worlds-title"><div class="worlds-intro"><span class="section-kicker">POSSIBLE FUTURE WORLDS</span><h2 id="worlds-title">Explore real stories.<br><em>For now, on their official platforms.</em></h2><p>We have contacted the rights teams about a limited pilot. These titles are <strong>not imported or interactive here</strong> unless the appropriate permissions are granted.</p></div><div class="world-cards">
+      <article class="world-card"><div class="world-mark c-one">01<span>♡</span></div><div><span class="world-publisher">WEBTOON ORIGINAL · DONGGEON LEE</span><h3>Yumi's Cells</h3><p>Emotions, relationships, and decisions.</p><span class="pending">PERMISSIONS REQUESTED</span><a href="https://www.webtoons.com/en/slice-of-life/yumi-cell/list?title_no=478" target="_blank" rel="noopener noreferrer">Official WEBTOON ↗</a></div></article>
+      <article class="world-card"><div class="world-mark c-two">02<span>◇</span></div><div><span class="world-publisher">WEBTOON ORIGINAL · SIU</span><h3>Tower of God</h3><p>Characters, secrets, and branching worlds.</p><span class="pending">PERMISSIONS REQUESTED</span><a href="https://www.webtoons.com/en/fantasy/tower-of-god/list?title_no=95" target="_blank" rel="noopener noreferrer">Official WEBTOON ↗</a></div></article>
+      <article class="world-card"><div class="world-mark c-three">03<span>⌛</span></div><div><span class="world-publisher">TAPAS · ANTSTUDIO / SANSOBEE</span><h3>The Villainess Turns the Hourglass</h3><p>Time, consequences, and second chances.</p><span class="pending">PERMISSIONS REQUESTED</span><a href="https://tapas.io/series/the-villainess-turns-the-hourglass/info" target="_blank" rel="noopener noreferrer">Official Tapas ↗</a></div></article>
+    </div></section>
+    <footer class="site-footer"><span>✦ MANHUA MULTIVERSE</span><span>One original story. Infinite conversations worth imagining.</span></footer>
   </div>
   <script type="module" src="./app.mjs"></script>
 </body>
