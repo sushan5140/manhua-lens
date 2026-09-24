@@ -21,15 +21,15 @@ Open **http://localhost:8080/multiverse/**, and use **Ctrl+Shift+R** to discard 
 
 1. Start at the illustrated current scene, not a scattered landing page. Every story moment now has its own `art/<scene>.svg` illustration (seven original vector compositions).
 2. Read a compact scene, then choose among the large `What happens next?` buttons directly beneath it.
-3. **Ask them before you decide**: Sori and Jae's tabs, four actual questions, and a clearly visible response occupy a full-width dock immediately under the choices.
-4. Use the compact timeline rail to fork any moment. The original timeline is not overwritten. The existing local-storage key stays compatible with V0 saves.
-5. Use the rights-pending real-manhwa links only as discovery. No third-party comic images or characters were imported.
+3. **Ask them before you decide**: Sori and Jae's tabs, four actual questions, and a clearly visible response occupy a side-by-side panel beside the current scene at desktop widths, stacked after the scene on mobile.
+4. Use the horizontal timeline above the reader to fork any moment. The original timeline is not overwritten. The existing local-storage key stays compatible with V0 saves.
+5. Use the rights-pending real-manhwa links only as discovery. A single externally hosted Yumi's Cells editorial cover is shown as a credited reference with fallback; no third-party panels or characters have been imported into the story engine. The cover is not bundled, licensed for public deployment, or a substitute for permissions.
 
 The app is dependency-free and entirely client-side. The illustrated story and dialogue are created for this demo; `characterReply` is *scripted* and constrained by the same replayed branch state as story decisions.
 
 ## Visual/interaction direction
 
-- Reader-centric layout: chapter image → scene text → choice buttons → character questions + response; multiverse rail is secondary, rights-pending titles appear below the main reader.
+- Reader-centric layout: horizontal timeline across the top → compact scene/text/choices on the left + character questions and responses beside it. On small screens these stack in reading order, and rights-pending titles remain below the reader.
 - Soft warm-paper, charcoal, muted plum and dusty-rose palette with high-contrast functional controls.
 - Responsive 1440/1024/768/375 layouts; mobile puts the reader before timeline.
 - Native buttons/selects, clear focus rings, alt text, politely announced choices/replies, reduced-motion support, small press-feedback motion only.
