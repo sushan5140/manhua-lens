@@ -4,6 +4,7 @@ on:
     paths:
       - "multiverse/**"
       - "tests/multiverse.test.mjs"
+      - "tests/multiverse-ui.test.mjs"
       - ".github/workflows/manhua-multiverse.yml"
   workflow_dispatch:
 jobs:
@@ -19,7 +20,7 @@ jobs:
           node --check multiverse/story.mjs
           node --check multiverse/app.mjs
       - name: Test causal story engine
-        run: node --test tests/multiverse.test.mjs
+        run: node --test tests/multiverse.test.mjs tests/multiverse-ui.test.mjs
       - name: Check standalone entry and original extension untouched
         run: |
           test -s multiverse/index.html
