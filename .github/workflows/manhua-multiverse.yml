@@ -24,4 +24,5 @@ jobs:
         run: |
           test -s multiverse/index.html
           test -s multiverse/style.css
-          git diff --quiet origin/main...HEAD -- manifest.json background.js content.js voice_server/
+          git fetch origin main --depth=1
+          git diff --quiet origin/main HEAD -- manifest.json background.js content.js voice_server/
