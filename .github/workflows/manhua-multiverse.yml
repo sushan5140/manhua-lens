@@ -1,0 +1,27 @@
+name: Manhua Multiverse engine (research preview)
+on:
+  pull_request:
+    paths:
+      - "multiverse/**"
+      - "tests/multiverse.test.mjs"
+      - ".github/workflows/manhua-multiverse.yml"
+  workflow_dispatch:
+jobs:
+  story-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate story-engine syntax
+        run: |
+          node --check multiverse/story.mjs
+          node --check multiverse/app.mjs
+      - name: Test causal story engine
+        run: node --test tests/multiverse.test.mjs
+      - name: Check standalone entry and original extension untouched
+        run: |
+          test -s multiverse/index.html
+          test -s multiverse/style.css
+          git diff --quiet origin/main...HEAD -- manifest.json background.js content.js voice_server/
