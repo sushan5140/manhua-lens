@@ -26,18 +26,12 @@
     </section>
     <div class="reader-layout">
       <aside class="journey" id="journey" aria-label="Your story timeline">
-        <div class="journey-head"><span class="section-kicker">YOUR STORY</span><span class="small-diamond">✦</span></div>
-        <h2>The Stolen<br><em>Tomorrow</em></h2>
-        <p class="journey-sub">A city loses one minute. Your choices determine where it goes.</p>
-        <div class="timeline-top"><span class="section-kicker">CURRENT PATH</span><span id="branch-count">01 TIMELINE</span></div>
-        <div class="select-wrap"><label class="sr-only" for="branch-select">Switch timeline</label><select id="branch-select"></select></div>
-        <div id="timeline" class="timeline" aria-live="polite"></div>
-        <p class="timeline-help">Tap <b>Branch here</b> at any moment to create another version of the story. The first timeline stays safe.</p>
-        <button class="reset-btn" id="restart" type="button"><span aria-hidden="true">↺</span> Start a new story</button>
+        <div class="journey-heading"><div><span class="section-kicker">YOUR MULTIVERSE</span><h2>Your path, <em>your choices.</em></h2></div><div class="journey-actions"><span id="branch-count" class="branch-count">01 TIMELINE</span><div class="select-wrap"><label class="sr-only" for="branch-select">Switch timeline</label><select id="branch-select"></select></div><button class="reset-btn" id="restart" type="button" title="Delete saved timelines"><span aria-hidden="true">↺</span> Start over</button></div></div>
+        <div id="timeline" class="timeline" aria-label="Horizontal story path. Branch here at any moment." aria-live="polite"></div>
       </aside>
       <main class="main-column" id="experience">
         <div class="reading-progress"><span><span class="status-dot"></span> CURRENT SCENE</span><div><span id="scene-number">SCENE 01</span><span class="progress-divider">/</span><span>THE STOLEN TOMORROW</span></div></div>
-        <article class="scene-card" aria-labelledby="scene-title">
+        <div class="reader-duo"><article class="scene-card" aria-labelledby="scene-title">
           <div class="scene-media">
             <img id="scene-image" src="./art/station.svg" alt="Original illustrated scene of Sori and Jae on the thirteenth platform in Seoul." width="1200" height="580" fetchpriority="high">
             <div class="media-top"><span id="chapter" class="media-pill">PROLOGUE / 00</span><span id="scene-location" class="media-location">SEOUL · ONE MINUTE BEFORE MIDNIGHT</span></div>
@@ -64,12 +58,12 @@
             </div>
             <div class="talk-reply"><div class="reply-heading"><span class="reply-icon" aria-hidden="true">❝</span><span id="reply-person">SORI · HER SIDE OF THE STORY</span></div><div id="reply" class="reply" role="status" aria-live="polite"></div><div class="talk-disclosure"><span class="status-dot"></span> Authored, decision-aware dialogue · Free-form AI chat is not enabled yet.</div></div>
           </div>
-        </section>
+        </section></div>
         <div class="micro-footer"><span id="save-status">Your decisions are stored in this browser.</span><span>YOUR UNIVERSE IS YOURS TO EXPLORE ↗</span></div>
       </main>
     </div>
     <section id="worlds" class="worlds" aria-labelledby="worlds-title"><div class="worlds-intro"><span class="section-kicker">POSSIBLE FUTURE WORLDS</span><h2 id="worlds-title">Explore real stories.<br><em>For now, on their official platforms.</em></h2><p>We have contacted the rights teams about a limited pilot. These titles are <strong>not imported or interactive here</strong> unless the appropriate permissions are granted.</p></div><div class="world-cards">
-      <article class="world-card"><div class="world-mark c-one">01<span>♡</span></div><div><span class="world-publisher">WEBTOON ORIGINAL · DONGGEON LEE</span><h3>Yumi's Cells</h3><p>Emotions, relationships, and decisions.</p><span class="pending">PERMISSIONS REQUESTED</span><a href="https://www.webtoons.com/en/slice-of-life/yumi-cell/list?title_no=478" target="_blank" rel="noopener noreferrer">Official WEBTOON ↗</a></div></article>
+      <article class="world-card yumi-original-card"><a class="official-cover-link" href="https://www.webtoons.com/en/slice-of-life/yumi-cell/list?title_no=478" target="_blank" rel="noopener noreferrer" aria-label="View Yumi's Cells on official WEBTOON"><img class="official-cover" src="https://www.koreadaily.com/data/photo/originals/2021/11/03/100837331.jpg" alt="Original Yumi's Cells cover showing Yumi and her animated cells" loading="lazy" referrerpolicy="no-referrer" width="512" height="512"><span class="official-cover-fallback" aria-hidden="true">♡</span></a><div><span class="world-publisher">WEBTOON ORIGINAL · DONGGEON LEE</span><h3>Yumi's Cells</h3><p>Emotions, relationships, and decisions.</p><span class="pending">PERMISSIONS REQUESTED · COVER REFERENCE ONLY</span><small class="cover-credit">Original art © Donggeon Lee · WEBTOON. Displayed from a third-party editorial source as a local concept reference; not licensed for our product.</small><a href="https://www.webtoons.com/en/slice-of-life/yumi-cell/list?title_no=478" target="_blank" rel="noopener noreferrer">Official WEBTOON ↗</a></div></article>
       <article class="world-card"><div class="world-mark c-two">02<span>◇</span></div><div><span class="world-publisher">WEBTOON ORIGINAL · SIU</span><h3>Tower of God</h3><p>Characters, secrets, and branching worlds.</p><span class="pending">PERMISSIONS REQUESTED</span><a href="https://www.webtoons.com/en/fantasy/tower-of-god/list?title_no=95" target="_blank" rel="noopener noreferrer">Official WEBTOON ↗</a></div></article>
       <article class="world-card"><div class="world-mark c-three">03<span>⌛</span></div><div><span class="world-publisher">TAPAS · ANTSTUDIO / SANSOBEE</span><h3>The Villainess Turns the Hourglass</h3><p>Time, consequences, and second chances.</p><span class="pending">PERMISSIONS REQUESTED</span><a href="https://tapas.io/series/the-villainess-turns-the-hourglass/info" target="_blank" rel="noopener noreferrer">Official Tapas ↗</a></div></article>
     </div></section>
