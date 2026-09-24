@@ -6,6 +6,7 @@ on:
       - "tests/multiverse.test.mjs"
       - "tests/multiverse-ui.test.mjs"
       - "tests/test_multiverse_server.py"
+      - "tests/multiverse-browser.test.mjs"
       - ".github/workflows/manhua-multiverse.yml"
   workflow_dispatch:
 jobs:
@@ -39,3 +40,29 @@ jobs:
           ! git ls-files --error-unmatch multiverse/.env >/dev/null 2>&1
           git fetch origin main --depth=1
           git diff --quiet origin/main HEAD -- manifest.json background.js content.js voice_server/
+
+  browser-world:
+    needs: story-world
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install browser automation for real UI smoke test
+        run: |
+          npm install --no-save --no-package-lock playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Interact with actual localhost story and verify responsiveness
+        run: node --test tests/multiverse-browser.test.mjs
+      - name: Preserve desktop and mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manhua-multiverse-visual-check
+          path: artifacts/
+          if-no-files-found: ignore
