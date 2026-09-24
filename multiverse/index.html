@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f4ee">
+  <meta name="description" content="An interactive original-story multiverse. Change a choice, meet the characters, and see what survives in another timeline.">
+  <title>Manhua Multiverse — The Stolen Tomorrow</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <a class="wordmark" href="./index.html" aria-label="Manhua Multiverse home"><span class="mark">M<span>✦</span></span><span>MANHUA<br>MULTIVERSE</span></a>
+      <div class="topright"><span class="eyebrow">A STORY THAT REMEMBERS YOU</span><button id="restart" class="quiet" type="button">Start over ↗</button></div>
+    </header>
+
+    <section class="intro">
+      <div><div class="micro"><span class="pulse"></span> AN INTERACTIVE STORY EXPERIMENT · V0</div>
+        <h1>What if the <em>story</em><br>remembered <i>you?</i></h1>
+        <p>Meet the people inside a story. Change what happened. Step into a different tomorrow without erasing the one you left behind.</p></div>
+      <div class="intro-stat" aria-label="Original fiction preview"><span>01</span><div>ORIGINAL<br>STORY WORLD<br><b>∞ POSSIBLE PATHS</b></div></div>
+    </section>
+
+    <main class="workspace">
+      <section class="scene-panel" aria-label="Interactive story">
+        <div class="scene-art station" id="scene-art">
+          <div class="art-haze" aria-hidden="true"></div><div class="orb orb-one" aria-hidden="true"></div><div class="orb orb-two" aria-hidden="true"></div>
+          <div class="art-caption"><span class="pill" id="chapter">PROLOGUE / 00</span><span class="art-index" id="scene-number">001 — THE STOLEN TOMORROW</span></div>
+          <div class="art-center" aria-hidden="true"><span class="art-symbol" id="art-symbol">十三</span><span class="art-rail"></span></div>
+          <span class="art-bottom" id="scene-location">SEOUL · ONE MINUTE BEFORE MIDNIGHT</span>
+        </div>
+        <div class="story-copy">
+          <span class="section-label">THE STOLEN TOMORROW <span class="slash">/</span> LIVE TIMELINE</span>
+          <h2 id="scene-title">The thirteenth platform</h2>
+          <p id="scene-text" class="story-text"></p>
+          <blockquote id="scene-line"></blockquote>
+          <div class="decision-heading"><span id="decision-title">WHAT DO YOU DO?</span><span id="choice-count">02 PATHS</span></div>
+          <div id="choices" class="choices" aria-live="polite"></div>
+          <div id="ending-actions" class="ending-actions" hidden><span>Every ending leaves a door behind.</span><button id="fork-ending" class="accent" type="button">Try another timeline ↗</button></div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <section class="card timeline-card">
+          <div class="card-head"><span class="section-label">YOUR MULTIVERSE</span><span id="branch-count" class="counter">01 WORLD</span></div>
+          <h3>One choice.<br><em>Many lives.</em></h3>
+          <label class="select-caption" for="branch-select">ACTIVE TIMELINE</label>
+          <select id="branch-select" aria-label="Choose saved timeline"></select>
+          <div id="timeline" class="timeline"></div>
+          <p class="hint">Fork any moment to make a different choice. Your original timeline stays intact.</p>
+        </section>
+
+        <section class="card dialogue-card">
+          <div class="card-head"><span class="section-label">BEHIND THE PANELS</span><span class="counter">02 CHARACTERS</span></div>
+          <h3>Ask them <em>why.</em></h3>
+          <p class="card-sub">Their answers reflect the choices you've made in this timeline.</p>
+          <div class="cast" role="group" aria-label="Choose a character">
+            <button class="cast-member selected" type="button" data-character="sori" aria-pressed="true"><span class="avatar sori">소</span><span><strong>Sori</strong><small>THE ARCHIVIST</small></span></button>
+            <button class="cast-member" type="button" data-character="jae" aria-pressed="false"><span class="avatar jae">재</span><span><strong>Jae</strong><small>THE COURIER</small></span></button>
+          </div>
+          <div id="character-bio" class="character-bio"></div>
+          <div id="questions" class="questions"></div>
+          <div id="reply" class="reply" role="status" aria-live="polite"><span>Choose a question to hear their side of the story.</span></div>
+          <p class="demo-note">✦ V0 dialogue is authored and state-aware, not live AI chat.</p>
+        </section>
+
+        <section class="about-card">
+          <div class="about-symbol">↝</div>
+          <div><strong>Built for curious readers.</strong><p>Original fiction, local timelines, no signup or scraped comic panels. Reading tools from Manhua Lens can connect here later.</p></div>
+        </section>
+      </aside>
+    </main>
+    <footer><span>MANHUA MULTIVERSE <span class="slash">/</span> AN ORIGINAL EXPERIMENT</span><span id="save-status">Your choices stay in this browser.</span></footer>
+  </div>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
