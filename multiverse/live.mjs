@@ -9,6 +9,8 @@ let world = newWorld();
 let activeCharacter = "sori";
 let health = {live:false,mode:"disconnected"};
 let busy = false;
+let compareOpen = false;
+let compareId = null;
 try {
   const saved=localStorage.getItem(SAVE_KEY);
   if(saved)world=loadWorld(saved);
@@ -127,6 +129,7 @@ function paintWorld() {
   $("branch-count").textContent=world.branches.length+
     (world.branches.length===1?" timeline":" timelines");
   renderTimeline();
+  renderComparison();
   renderOptions();
   renderFacts(state);
   renderJournal();
@@ -162,6 +165,65 @@ function renderTimeline() {
     root.append(entry);
   }
 }
+
+function renderComparison() {
+  const root=$("comparison");
+  root.hidden=!compareOpen;
+  $("compare-toggle").setAttribute("aria-pressed",String(compareOpen));
+  if(!compareOpen)return;
+  const other=world.branches.filter(b=>b.id!==world.active);
+  const select=$("compare-select");
+  select.replaceChildren();
+  const grid=$("comparison-grid");
+  grid.replaceChildren();
+  if(!other.length){
+    grid.append(element("p","journal-empty",
+      "Create another timeline using Branch here or Fork now. Then compare the two worlds and their consequences."));
+    return;
+  }
+  if(!other.some(b=>b.id===compareId))compareId=other[0].id;
+  for(const b of other){
+    const opt=element("option","",b.name);
+    opt.value=b.id;
+    opt.selected=b.id===compareId;
+    select.append(opt);
+  }
+  const ours=activeBranch(world);
+  const theirs=world.branches.find(b=>b.id===compareId);
+  const states=[replay(ours),replay(theirs)];
+  const common=Math.min(ours.events.length,theirs.events.length);
+  let divergence=0;
+  while(divergence<common&&
+        JSON.stringify(ours.events[divergence])===JSON.stringify(theirs.events[divergence]))
+    divergence++;
+  for(const [index,b] of [ours,theirs].entries()){
+    const st=states[index];
+    const card=element("article","comparison-card");
+    const name=element("span","comparison-name",index===0?"CURRENT · "+b.name:"ALTERNATIVE · "+b.name);
+    const title=element("strong","",st.title);
+    const info=element("p","",[
+      "Location: "+st.scene,
+      "Key: "+(st.inventory.includes("silver key")?"held":"not held"),
+      "Evidence: "+(st.evidence.join(", ")||"none"),
+      "Sori: "+st.trust.sori+", Jae: "+st.trust.jae,
+      "World flags: "+(st.flags.join(", ")||"none")
+    ].join("\n"));
+    card.append(name,title,info);
+    if(index===1){
+      const jump=button("Enter this timeline ↗","compare-jump",()=>{
+        if(busy)return;
+        world=switchWorld(world,b.id);
+        save();paintWorld();scrollToScene();
+      });
+      card.append(jump);
+    }
+    grid.append(card);
+  }
+  grid.prepend(element("p","divergence",
+    "These worlds share "+divergence+" event"+(divergence===1?"":"s")+
+    " before their paths diverge."));
+}
+
 function renderOptions() {
   const root=$("choices");
   root.replaceChildren();
@@ -323,6 +385,16 @@ $("restart").addEventListener("click",()=>{
 });
 $("chat-context").addEventListener("click",()=>{
   window.alert("The currently selected character remembers conversations and story events from only this timeline. Fork a moment to create a version with a different past. Freeform AI requires a configured provider; offline replies are procedural and clearly labeled.");
+});
+
+
+$("compare-toggle").addEventListener("click",()=>{
+  compareOpen=!compareOpen;
+  renderComparison();
+});
+$("compare-select").addEventListener("change",event=>{
+  compareId=event.target.value;
+  renderComparison();
 });
 
 $("export-world").addEventListener("click",()=>{
