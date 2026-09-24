@@ -1,190 +1,190 @@
 import {
-  SCENES, CHARACTERS, QUESTIONS, freshWorld, loadWorld, readBranch,
+  SCENES, CHARACTERS, QUESTIONS, CHOICES, freshWorld, loadWorld, readBranch,
   getChoices, choose, fork, switchBranch, characterReply
 } from "./story.mjs";
 
-const SAVE_KEY = "manhua-multiverse-original-world-v1";
-const $ = (id) => document.getElementById(id);
-const symbols = {station:"十三",archive:"記",tunnel:"✦",tower:"時",city:"明",pact:"約",freedom:"∞"};
+const SAVE_KEY = "manhua-multiverse-original-world-v1"; // keep every V0 timeline
+const $ = id => document.getElementById(id);
 let world = freshWorld();
-let character = "sori";
+let activeCharacter = "sori";
+let activeQuestion = "motive";
 
 try {
-  const saved = localStorage.getItem(SAVE_KEY);
-  if (saved) world = loadWorld(saved);
+  const stored = localStorage.getItem(SAVE_KEY);
+  if (stored) world = loadWorld(stored);
 } catch {
-  $("save-status").textContent = "This browser could not load local progress.";
+  $("save-status").textContent = "Local saving is unavailable in this browser.";
 }
-
-function setStatus(message) { $("save-status").textContent = message; }
 
 function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(world));
-    setStatus("Your choices stay in this browser.");
+    $("save-status").textContent = "Your decisions are stored in this browser.";
   } catch {
-    setStatus("Local saving is unavailable in this browser.");
+    $("save-status").textContent = "Your browser blocked local saving.";
   }
 }
-
-function makeButton(className, text, handler, disabled = false) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = className;
-  b.textContent = text;
-  b.disabled = disabled;
-  b.addEventListener("click", handler);
-  return b;
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
 }
-
+function btn(className, label, action, disabled = false) {
+  const node = el("button", className, label);
+  node.type = "button";
+  node.disabled = disabled;
+  node.addEventListener("click", action);
+  return node;
+}
+function goToReader() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    $("experience").scrollIntoView({ behavior: "auto", block: "start" });
+  } else {
+    $("experience").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+function labelOf(choiceId) {
+  for (const list of Object.values(CHOICES)) {
+    const found = list.find(c => c.id === choiceId);
+    if (found) return found.label;
+  }
+  return "An earlier choice";
+}
 function renderChoices() {
-  const choices = getChoices(world);
-  const box = $("choices");
-  box.replaceChildren();
-  $("decision-title").textContent = choices.length ? "WHAT DO YOU DO?" : "THIS TIMELINE ENDS HERE";
-  $("choice-count").textContent = String(choices.filter(c => c.available).length).padStart(2,"0") + " PATHS";
-  choices.forEach((choice, index) => {
-    const btn = makeButton("choice", "", () => {
+  const list = getChoices(world);
+  const root = $("choices");
+  root.replaceChildren();
+  $("decision-title").textContent = list.length ? "What happens next?" : "You've reached an ending.";
+  $("choice-count").textContent = String(list.filter(c => c.available).length).padStart(2, "0") +
+    (list.length === 1 ? " PATH" : " PATHS");
+  list.forEach((choice, index) => {
+    const b = btn("choice", "", () => {
       world = choose(world, choice.id);
+      activeQuestion = "motive";
       save();
       render();
+      goToReader();
     }, !choice.available);
-    const count = document.createElement("span");
-    count.className = "choice-num";
-    count.textContent = String(index + 1).padStart(2,"0");
-    const words = document.createElement("span");
-    words.className = "choice-copy";
-    const title = document.createElement("strong");
-    title.textContent = choice.label;
-    const sub = document.createElement("small");
-    sub.textContent = choice.available ? choice.detail : choice.reason;
-    words.append(title, sub);
-    const arrow = document.createElement("span");
-    arrow.className = "arrow";
+    const n = el("span", "choice-num", String(index + 1).padStart(2, "0"));
+    const copy = el("span", "choice-copy");
+    copy.append(el("strong", "", choice.label),
+      el("small", "", choice.available ? choice.detail : choice.reason));
+    const arrow = el("span", "arrow", choice.available ? "↗" : "×");
     arrow.setAttribute("aria-hidden", "true");
-    arrow.textContent = choice.available ? "↗" : "×";
-    btn.append(count, words, arrow);
-    box.append(btn);
+    b.append(n, copy, arrow);
+    root.append(b);
   });
 }
-
 function renderTimeline() {
-  const { steps } = readBranch(world);
+  const {steps, branch} = readBranch(world);
   const select = $("branch-select");
   select.replaceChildren();
-  for (const branch of world.branches) {
-    const option = document.createElement("option");
-    option.value = branch.id;
-    option.textContent = branch.name;
-    option.selected = world.active === branch.id;
+  for (const b of world.branches) {
+    const option = el("option", "", b.name);
+    option.value = b.id;
+    option.selected = b.id === world.active;
     select.append(option);
   }
   $("branch-count").textContent = String(world.branches.length).padStart(2,"0") +
-    (world.branches.length === 1 ? " WORLD" : " WORLDS");
-
-  const panel = $("timeline");
-  panel.replaceChildren();
-  steps.forEach((step, index) => {
-    const moment = document.createElement("div");
-    moment.className = "moment" + (index === steps.length - 1 ? " current" : "");
-    const heading = document.createElement("strong");
-    heading.textContent = SCENES[step.scene].title;
-    const caption = document.createElement("small");
-    caption.textContent = index === 0 ? "The moment before your first choice." :
-      "Decision " + index + " · " + CHOICE_LABEL(step.choice);
-    const forkBtn = makeButton("fork-btn",
-      index === steps.length - 1 ? "Duplicate this moment ↗" : "Fork here ↗",
-      () => {
-        world = fork(world,index);
-        save();
-        render();
-      },world.branches.length >= 24);
-    moment.append(heading,caption,forkBtn);
-    panel.append(moment);
+    (world.branches.length === 1 ? " TIMELINE" : " TIMELINES");
+  const root = $("timeline");
+  root.replaceChildren();
+  steps.forEach((step,index) => {
+    const row = el("div","moment" + (index === steps.length - 1 ? " current" : ""));
+    const subtitle = index === 0 ? "Where your story began" : labelOf(step.choice);
+    row.append(el("strong","",SCENES[step.scene].title), el("small","",subtitle));
+    const forkBtn = btn("fork-btn","Branch here ↗",() => {
+      world = fork(world,index);
+      activeQuestion = "motive";
+      save();
+      render();
+      goToReader();
+    },world.branches.length >= 24);
+    forkBtn.setAttribute("aria-label","Create a new timeline from "+SCENES[step.scene].title);
+    row.append(forkBtn);
+    root.append(row);
   });
 }
-
-function CHOICE_LABEL(id) {
-  for (const decisions of Object.values({
-    station: [{id:"follow_sori",label:"Followed Sori"},{id:"follow_jae",label:"Followed Jae"}],
-    archive: [{id:"read_ledger",label:"Read the ledger"},{id:"burn_ledger",label:"Burned the ledger"}],
-    tunnel: [{id:"keep_key",label:"Kept the key"},{id:"leave_key",label:"Left the key"}],
-    tower: [{id:"restore",label:"Restored the clock"},{id:"trade",label:"Traded a memory"},{id:"shatter",label:"Shattered the clock"}]
-  })) {
-    const result = decisions.find(x => x.id === id);
-    if (result) return result.label;
-  }
-  return "A choice was made";
+function showReply() {
+  const answer = characterReply(world,activeCharacter,activeQuestion);
+  const character = CHARACTERS[activeCharacter];
+  $("reply-person").textContent = character.name.toUpperCase() + " · THEIR SIDE OF THE STORY";
+  const root = $("reply");
+  root.textContent = "“" + answer.text + "”";
+  document.querySelectorAll("#questions .question").forEach(q => {
+    const isActive = q.dataset.question === activeQuestion;
+    q.classList.toggle("active",isActive);
+    q.setAttribute("aria-pressed",String(isActive));
+  });
 }
-
-function renderCharacter() {
-  const ch = CHARACTERS[character];
+function renderCharacters() {
+  const character = CHARACTERS[activeCharacter];
   document.querySelectorAll("[data-character]").forEach(b => {
-    const selected = b.dataset.character === character;
-    b.classList.toggle("selected", selected);
+    const selected = b.dataset.character === activeCharacter;
+    b.classList.toggle("selected",selected);
     b.setAttribute("aria-pressed",String(selected));
   });
-  $("character-bio").textContent = ch.description;
-  const qbox = $("questions");
-  qbox.replaceChildren();
-  QUESTIONS.forEach(question => {
-    qbox.append(makeButton("question", question.label, () => {
-      const answer = characterReply(world, character, question.id);
-      const reply = $("reply");
-      reply.replaceChildren();
-      const title = document.createElement("strong");
-      title.textContent = ch.name + " · " + question.label;
-      const quote = document.createElement("span");
-      quote.textContent = "“" + answer.text + "”";
-      reply.append(title, quote);
-    }));
-  });
-  $("reply").textContent = "Choose a question to hear " + ch.name + "'s side of this timeline.";
+  $("character-bio").textContent = character.description;
+  const questions = $("questions");
+  questions.replaceChildren();
+  for (const q of QUESTIONS) {
+    const node = btn("question",q.label,() => {
+      activeQuestion = q.id;
+      showReply();
+    });
+    node.dataset.question = q.id;
+    questions.append(node);
+  }
+  showReply();
 }
-
 function render() {
-  const {scene,finished,steps} = readBranch(world);
-  const chapter = SCENES[scene];
-  $("scene-art").className = "scene-art " + chapter.tone;
-  $("chapter").textContent = chapter.chapter;
-  $("scene-number").textContent = String(steps.length).padStart(3,"0") +
-    " — THE STOLEN TOMORROW";
-  $("art-symbol").textContent = symbols[scene];
-  $("scene-location").textContent = chapter.location.toUpperCase();
-  $("scene-title").textContent = chapter.title;
-  $("scene-text").textContent = chapter.text;
-  $("scene-line").textContent = "“" + chapter.line + "”";
+  const { scene, finished, steps } = readBranch(world);
+  const info = SCENES[scene];
+  const sceneImage = $("scene-image");
+  sceneImage.src = "./art/" + info.tone + ".svg";
+  sceneImage.alt = "Original illustration for " + info.title + " in The Stolen Tomorrow.";
+  $("chapter").textContent = info.chapter;
+  $("scene-location").textContent = info.location.toUpperCase();
+  $("scene-number").textContent = "SCENE " + String(steps.length).padStart(2,"0");
+  $("scene-step").textContent = steps.length === 1 ? "YOUR FIRST CHOICE" : "YOUR JOURNEY · " + (steps.length - 1) + " DECISIONS";
+  $("scene-title").textContent = info.title;
+  $("scene-text").textContent = info.text;
+  $("scene-line").textContent = "“" + info.line + "”";
   $("ending-actions").hidden = !finished;
   renderChoices();
   renderTimeline();
-  renderCharacter();
+  renderCharacters();
 }
-
-document.querySelectorAll("[data-character]").forEach(b => {
-  b.addEventListener("click", () => {
-    character = b.dataset.character;
-    renderCharacter();
+document.querySelectorAll("[data-character]").forEach(node => {
+  node.addEventListener("click",() => {
+    activeCharacter = node.dataset.character;
+    activeQuestion = "motive";
+    renderCharacters();
   });
 });
-
-$("branch-select").addEventListener("change",e => {
-  world = switchBranch(world,e.target.value);
+$("branch-select").addEventListener("change",event => {
+  world = switchBranch(world,event.target.value);
+  activeQuestion = "motive";
   save();
   render();
+  goToReader();
 });
-
-$("fork-ending").addEventListener("click", () => {
-  const {steps} = readBranch(world);
-  world = fork(world, Math.max(0,steps.length-2));
+$("fork-ending").addEventListener("click",() => {
+  const { steps } = readBranch(world);
+  world = fork(world,Math.max(0,steps.length - 2));
+  activeQuestion = "motive";
   save();
   render();
+  goToReader();
 });
-
-$("restart").addEventListener("click", () => {
-  if (!window.confirm("Delete all your saved timelines and begin again?")) return;
+$("restart").addEventListener("click",() => {
+  if (!window.confirm("Delete ALL your saved timelines and begin again?")) return;
   world = freshWorld();
+  activeCharacter = "sori";
+  activeQuestion = "motive";
   save();
   render();
+  goToReader();
 });
-
 render();
