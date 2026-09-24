@@ -513,6 +513,17 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(404,"Not a public asset.")
             return
         super().do_GET()
+    def do_HEAD(self):
+        # Prevent exposing .env metadata via SimpleHTTPRequestHandler's
+        # otherwise unrestricted inherited HEAD implementation.
+        path=unquote(urlsplit(self.path).path)
+        if path not in {"/multiverse/","/multiverse/index.html",
+                        "/multiverse/style.css","/multiverse/live.mjs",
+                        "/multiverse/engine.mjs"} and not re.fullmatch(
+                        r"/multiverse/art/(?:station|archive|tunnel|tower|city|pact|freedom)\.svg",path):
+            self.send_error(404,"Not a public asset.")
+            return
+        return super().do_HEAD()
     def do_POST(self):
         path=urlsplit(self.path).path
         if path not in {"/api/act","/api/chat"}:
