@@ -23,3 +23,19 @@
 .journey-tools button{min-height:38px}
 @media(max-width:740px){.journey-top{flex-direction:column;align-items:stretch}.journey-tools{justify-content:flex-start}.journey-tools select{min-width:145px;flex:1 1 145px;max-width:none}.journey-tools button{flex:0 0 auto}}
 @media(max-width:560px){.journey-tools{display:flex;gap:6px}.journey-tools select{width:auto;flex:1 1 100%;max-width:none}.journey-tools button{flex:1 1 calc(25% - 6px);text-align:center;font-size:9px;padding:9px 8px}}
+
+
+/* Compare two actual event histories, not a cosmetic multiverse label. */
+.comparison{border-top:1px solid #e9dbe1;padding:15px 0 8px;margin-top:2px}
+.comparison[hidden]{display:none}
+.comparison-heading{display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:12px}
+.comparison-heading label{font-size:9px;font-weight:800;letter-spacing:.08em;color:#a58d9b;margin-left:auto}
+.comparison-heading select{border:1px solid #e5d7dd;background:#fdf8f8;padding:9px;border-radius:9px;font-size:11px;color:#60465b;max-width:220px}
+.comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.divergence{grid-column:1/-1;font-size:11px;margin:0;color:#8b7183;line-height:1.55}
+.comparison-card{background:#faf3f5;border:1px solid #ebdce2;border-radius:12px;padding:13px;min-width:0}
+.comparison-name{display:block;font-size:9px;color:#a47a90;font-weight:800;letter-spacing:.07em}
+.comparison-card strong{display:block;font-size:14px;letter-spacing:-.02em;margin:6px 0}
+.comparison-card p{white-space:pre-line;color:#806d7a;line-height:1.65;font-size:11px;margin:0 0 9px;overflow-wrap:anywhere}
+.compare-jump{border:0;background:#56354e;color:white;padding:9px 11px;border-radius:9px;font-size:11px;font-weight:800}
+@media(max-width:560px){.comparison-grid{grid-template-columns:1fr}.comparison-heading label{margin-left:0}.comparison-heading select{width:100%;max-width:none}}
