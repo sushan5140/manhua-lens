@@ -1,7 +1,7 @@
 import {
   SAVE_KEY, CHARACTERS, SCENE_ART, OPENING_OPTIONS, newWorld, loadWorld,
   activeBranch, replay, forkWorld, switchWorld, lastOptions, moments,
-  transcript, lastEvent, stateSummary, validateWorld
+  transcript, lastEvent, stateSummary, validateWorld, migrateLegacy
 } from "./engine.mjs";
 
 const $ = id => document.getElementById(id);
@@ -12,6 +12,14 @@ let busy = false;
 try {
   const saved=localStorage.getItem(SAVE_KEY);
   if(saved)world=loadWorld(saved);
+  else {
+    const previous=localStorage.getItem("manhua-multiverse-original-world-v1");
+    if(previous){
+      world=migrateLegacy(previous);
+      localStorage.setItem(SAVE_KEY,JSON.stringify(world));
+      $("save-status").textContent="Your original V1 timelines were imported; the old save remains untouched.";
+    }
+  }
 } catch {
   $("save-status").textContent="Your browser blocked local saving.";
 }
@@ -20,7 +28,7 @@ function save() {
     localStorage.setItem(SAVE_KEY,JSON.stringify(world));
     $("save-status").textContent="Your story stays in this browser.";
   } catch {
-    $("save-status").textContent="Local saving is blocked: export your story before closing.";
+    $("save-status").textContent="Local saving is blocked. Use the Save button for a manual JSON backup."
   }
 }
 function element(tag,className,text) {
@@ -316,5 +324,36 @@ $("restart").addEventListener("click",()=>{
 $("chat-context").addEventListener("click",()=>{
   window.alert("The currently selected character remembers conversations and story events from only this timeline. Fork a moment to create a version with a different past. Freeform AI requires a configured provider; offline replies are procedural and clearly labeled.");
 });
+
+$("export-world").addEventListener("click",()=>{
+  const payload=new Blob([JSON.stringify(world,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(payload);
+  const link=document.createElement("a");
+  link.href=url;
+  link.download="manhua-multiverse-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  $("save-status").textContent="Backup downloaded. Store it somewhere safe.";
+});
+$("import-world").addEventListener("click",()=>{
+  if(!busy)$("world-file").click();
+});
+$("world-file").addEventListener("change",async event=>{
+  const file=event.target.files?.[0];
+  event.target.value="";
+  if(!file||busy)return;
+  try{
+    if(file.size>512_000)throw Error("That story backup is too large.");
+    const incoming=validateWorld(JSON.parse(await file.text()));
+    if(!window.confirm("Replace this browser's current V2 timelines with the selected backup? Download a Save backup first if you need it."))return;
+    world=incoming;
+    save();
+    paintWorld();
+    scrollToScene();
+  }catch(e){error("action-error","Could not open the story backup: "+e.message);}
+});
+
 paintWorld();
 discoverMode();
