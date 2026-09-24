@@ -1,59 +1,48 @@
 # Manhua Multiverse — The Stolen Tomorrow
 
-**Status:** original-fiction, standalone, deterministic interactive STORY PROTOTYPE (V0). It is NOT yet live generative character chat, panel OCR, copyrighted-comic ingestion, AI-generated branches, or a research validation of narrative consistency.
+**Status:** independent V1 reader UI and original-fiction prototype. **It is not live AI chat or an imported licensed manhwa.** All real-manhwa cards link to their official platforms while permissions are pending.
 
-Manhua Multiverse is the next concept adjacent to Manhua Lens: instead of only looking up Korean in a manhwa, readers could talk to characters, question decisions, and enter counterfactual scenes. The long-term technical challenge is **character identity + causal event consistency across branches**.
+## Run the redesigned localhost preview
 
-## Play the prototype
+The work is on `feature/manhua-multiverse-foundation`, NOT `main`. If using the separate Windows worktree from our earlier chat:
 
-No dependencies or credentials. From the repository root:
+```powershell
+$root = "C:\Users\DELL\Documents\Codex\2026-09-12\continue-work-on-the-manhua-lens\work\manhua-lens"
+$preview = Join-Path (Split-Path $root) "manhua-multiverse-preview"
+git -C $root fetch origin
+git -C $preview switch --detach origin/feature/manhua-multiverse-foundation
+cd $preview
+py -m http.server 8080
+```
 
-\`\`\`bash
-python -m http.server 8080
-\`\`\`
+Open **http://localhost:8080/multiverse/**, and use **Ctrl+Shift+R** to discard the cached stylesheet. If the worktree does not yet exist, run `git -C $root worktree add --detach $preview origin/feature/manhua-multiverse-foundation` instead of the switch line.
 
-Open http://localhost:8080/multiverse/ . Modern Edge, Chrome, Firefox and Safari support the JS module. You can also use \`npx serve .\` from the root; ordinary browsers generally block ES-module imports from \`file://\` so do not double-click the HTML directly.
+## V1 reading experience
 
-## Implemented now
+1. Start at the illustrated current scene, not a scattered landing page. Every story moment now has its own `art/<scene>.svg` illustration (seven original vector compositions).
+2. Read a compact scene, then choose among the large `What happens next?` buttons directly beneath it.
+3. **Ask them before you decide**: Sori and Jae's tabs, four actual questions, and a clearly visible response occupy a full-width dock immediately under the choices.
+4. Use the compact timeline rail to fork any moment. The original timeline is not overwritten. The existing local-storage key stays compatible with V0 saves.
+5. Use the rights-pending real-manhwa links only as discovery. No third-party comic images or characters were imported.
 
-- A complete short, **original** fantasy story, *The Stolen Tomorrow*, with 3 possible endings.
-- A warm responsive reading UI with two character panels and 4 authored questions each.
-- Decisions tracked per-branch. Scripted character answers change when you follow Sori, follow Jae, read/burn the ledger, take/leave the silver key, or reach an ending.
-- Causal checks: you cannot repair the clock without a key AND either the ledger or Jae's secret; you cannot trade a memory without the key.
-- Fork from an earlier point and independently continue a second timeline; return to the original without losing it.
-- Local-only browser storage; explicitly confirm before erasing all timelines.
-- Node built-in tests for branch isolation, continuity, locked endings, invalid saves, and character memory.
+The app is dependency-free and entirely client-side. The illustrated story and dialogue are created for this demo; `characterReply` is *scripted* and constrained by the same replayed branch state as story decisions.
 
-\`\`\`bash
-node --test tests/multiverse.test.mjs
-\`\`\`
+## Visual/interaction direction
 
-## Relationship to Manhua Lens
+- Reader-centric layout: chapter image → scene text → choice buttons → character questions + response; multiverse rail is secondary, rights-pending titles appear below the main reader.
+- Soft warm-paper, charcoal, muted plum and dusty-rose palette with high-contrast functional controls.
+- Responsive 1440/1024/768/375 layouts; mobile puts the reader before timeline.
+- Native buttons/selects, clear focus rings, alt text, politely announced choices/replies, reduced-motion support, small press-feedback motion only.
+- Illustration is an original graphic-vector prototype, not scanned or scraped manhwa art; the previous generated visual mockup was a design reference, not copied as licensed art.
 
-**Existing extension remains unchanged.** Manhua Lens is a Chrome/Edge Manifest V3 text-selection dictionary/translation/pronunciation assistant with Korean/Japanese/Chinese and other languages. The prototype lives in a separate \`multiverse/\` folder, with no host permissions, no extension privileges, no change to Azure voice wiring, no signup, and no backend API key.
+## Run tests
 
-Future permitted bridges:
-1. Korean dialogue vocabulary cards via a tightly scoped interface to the extension's *existing dictionary data*, without exposing provider secrets.
-2. Authorized imported creator material or user-authored original story panels, with provenance/permissions.
-3. Server-authenticated LLM character chat, with role and event-state retrieval, a structured candidate-event validator, and human/author approval for canon changes.
-4. Original artwork, Korean voice previews and panel-by-panel narrative visual parsing only after the rights/consent boundary is defined.
+```bash
+node --test tests/multiverse.test.mjs tests/multiverse-ui.test.mjs
+```
 
-## AI & copyright honesty
+CI checks scene art exists, the story-before-chat-before-discovery DOM order, causal story paths, branch isolation, malicious/corrupt saves, non-playable licensed-title links, responsive CSS and root extension isolation. These are code checks, not a claim of manual cross-browser screenshot testing.
 
-The two characters are **not LLM-driven in V0**. Their replies are transparent, hand-authored and causally grounded in the current choice log. There is no use of scanned commercial comics, scraped webtoon images, impersonated real creators, or copyrighted fictional character dialogue. Future user uploads must have a rights/licensing policy and must be kept private by default.
+## Product boundary
 
-## Why replay, not mutable "facts"
-
-Each timeline stores only an ordered sequence of choice IDs. The engine recomputes facts, available actions, and character dialogue by replay. This avoids one branch accidentally inheriting another branch's knowledge and makes causal errors testable. Forking at step K copies only the first K events.
-
-## Next build: V1
-
-- Panel-based narrative renderer and a scene graph editor for original authors.
-- Real LLM chat via server-side key, separate label from authored scene text, grounded on selected timeline summaries.
-- Draft alternatives are *non-canon* until validated; no agent may silently rewrite prior choice events.
-- Reproducible benchmark for character consistency, chronology, causal contradictions, memory leakage across branches, unsupported claims, user agency and latency.
-- A separate Vercel project only when this branch's UI is accepted. No deployment or merge has been done by this PR.
-
-## Repo impact
-
-Files added: \`multiverse/\`, \`tests/multiverse.test.mjs\`, and an opt-in CI workflow. No change to root \`manifest.json\`, \`background.js\`, \`content.js\`, dictionary files, voice server, or extension settings.
+No new extensions privileges, hosted API keys, sign-in, third-party image downloads, licensed character chat or Vercel deployments. `manifest.json`, `background.js`, `content.js`, existing dictionaries and `voice_server/` remain unchanged. This branch remains a draft PR until design and rights constraints have been reviewed.
