@@ -113,3 +113,55 @@ export function stateSummary(state) {
     {name:"RELATIONSHIP",value:"Sori "+state.trust.sori+" · Jae "+state.trust.jae}
   ];
 }
+
+
+/** One-way import of the previous V1 scripted-story save; original key remains untouched.
+ * Only known original choices are mapped, no made-up or cross-branch events. */
+export function migrateLegacy(raw) {
+  let old;
+  try {old=JSON.parse(raw);} catch {return newWorld();}
+  if(!old||old.version!==1||!Array.isArray(old.branches)||old.branches.length<1||
+    old.branches.length>24)return newWorld();
+  const choices={
+    follow_sori:{scene:"archive",text:"Follow Sori onto the empty train",title:"The room of erased mornings",
+      narrative:"Sori leads you to the archive of erased futures.",changes:{trust:{sori:1}}},
+    follow_jae:{scene:"tunnel",text:"Run with Jae into the tunnel",title:"The courier's shortcut",
+      narrative:"You follow Jae through the service passage toward the clock.",changes:{trust:{jae:1}}},
+    read_ledger:{scene:"tower",text:"Read the erased ledger",title:"The clock above the city",
+      narrative:"You reach the tower with the silver key and an archive record of the missing minute.",
+      changes:{add_items:["silver key","ledger page"],add_evidence:["ledger"]}},
+    burn_ledger:{scene:"tower",text:"Burn the erased ledger",title:"The clock above the city",
+      narrative:"You arrive at the tower with the silver key, having destroyed the ledger.",
+      changes:{add_items:["silver key"]}},
+    keep_key:{scene:"tower",text:"Take the silver key and hear Jae's secret",title:"The clock above the city",
+      narrative:"Jae confides what the clock once took from him. You carry the key to the tower.",
+      changes:{add_items:["silver key"],add_evidence:["jae_secret"]}},
+    leave_key:{scene:"tower",text:"Leave the silver key in the tunnel",title:"The clock above the city",
+      narrative:"You reach the tower without the silver key.",changes:{}},
+    restore:{scene:"city",text:"Restore the missing minute",title:"A tomorrow worth keeping",
+      narrative:"You restore the erased minute using the key and evidence from this timeline.",
+      changes:{add_flags:["clock_restored"]}},
+    trade:{scene:"pact",text:"Trade a memory to free the travellers",title:"The courier's pact",
+      narrative:"You exchange one memory to release the lost travellers.",
+      changes:{add_flags:["memory_traded"]}},
+    shatter:{scene:"freedom",text:"Shatter the clock",title:"A sky without timetables",
+      narrative:"You break the clock and open the futures that it held in place.",
+      changes:{add_flags:["clock_broken"]}}
+  };
+  const migrated={version:2,active:"thread-1",nextId:Math.max(2,old.nextId||2),branches:[]};
+  for(let i=0;i<old.branches.length;i++){
+    const b=old.branches[i];
+    if(!b||!Array.isArray(b.events)||b.events.length>6||
+      b.events.some(id=>!choices[id]))return newWorld();
+    const id="thread-"+(i+1);
+    if(b.id===old.active)migrated.active=id;
+    migrated.branches.push({id,name:i===0?"Original timeline (V1)":
+      "Imported timeline "+(i+1),events:b.events.map(id=>({
+        type:"action",...structuredClone(choices[id]),
+        options:["Ask either character about the choice","Investigate what changed","Take another route"],
+        mode:"imported"
+      }))});
+  }
+  migrated.nextId=Math.max(migrated.nextId,migrated.branches.length+1);
+  try{return validateWorld(migrated);}catch{return newWorld();}
+}
