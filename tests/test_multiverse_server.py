@@ -110,6 +110,21 @@ class EngineTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,"continuity"):
                     SERVER.act(world(),"I invent a key and repair everything")
 
+    def test_ai_retries_after_rejecting_impossible_action(self):
+        bad=json.dumps({"scene":"city","title":"Conjured restoration",
+          "narrative":"Impossible, no key.","changes":{"add_flags":["clock_restored"]},
+          "options":["Stop"]})
+        good=json.dumps({"scene":"archive","title":"A better way to investigate",
+          "narrative":"Your choice starts a search rather than a magical repair.",
+          "changes":{"add_evidence":["ledger"]},
+          "options":["Find Jae"]})
+        with patch.object(SERVER,"provider",return_value=("groq","","","")):
+            with patch.object(SERVER,"call_llm",side_effect=[bad,good]) as fake:
+                result=SERVER.act(world(),"I try restoring without a key")
+        self.assertEqual(fake.call_count,2)
+        self.assertEqual(result["state"]["scene"],"archive")
+        self.assertEqual(len(result["world"]["branches"][0]["events"]),1)
+
     def test_ai_real_freeform_output_changes_story(self):
         fake=json.dumps({"scene":"rooftop","title":"An encounter above Seoul",
            "narrative":"You take a route nobody expected. The unchanging clock stares back.",
