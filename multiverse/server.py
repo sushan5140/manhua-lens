@@ -128,14 +128,14 @@ def validate_world(world):
             raise ValueError("Timeline is full.")
         if len(json.dumps(events, ensure_ascii=False)) > 105_000:
             raise ValueError("Timeline is too large.")
-        for event in events:
+        for index, event in enumerate(events):
             if not isinstance(event, dict) or event.get("type") not in {"action", "chat"}:
                 raise ValueError("Invalid timeline event.")
             if not isinstance(event.get("text"), str) or len(event["text"]) > 2000:
                 raise ValueError("Invalid event text.")
             if event["type"] == "action":
                 normalize_event(event)
-                prior = replay({"events": events[:events.index(event)]})
+                prior = replay({"events": events[:index]})
                 if illegal_transition(event["scene"], event.get("changes", {}), prior):
                     raise ValueError("A saved event violates this timeline\x27s causal history.")
             elif event.get("character") not in CHARACTERS or not isinstance(event.get("reply"), str) or len(event["reply"]) > 2500:
