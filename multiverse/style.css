@@ -10,3 +10,78 @@
 @media(max-width:570px){html{scroll-padding-top:16px}.brand{font-size:10px}.brand-symbol{width:35px;height:35px}.brand small{font-size:7px}.header-inner{flex-wrap:wrap;gap:9px;padding-top:10px;padding-bottom:10px}.header-nav{order:2;width:100%;justify-content:space-around}.header-nav a{font-size:10px;padding:9px 9px}.page-intro{padding:32px 0 24px}.page-intro h1{font-size:36px}.page-intro p{font-size:12px}.reading-progress{font-size:8px}.scene-media{height:243px}.scene-media img{object-position:center center}.media-top{left:13px;top:13px;right:13px}.media-pill{font-size:8px;padding:7px 9px}.media-location{font-size:8px;max-width:120px}.media-credit{font-size:7px;bottom:8px;right:10px;max-width:150px;text-align:right}.story-body{padding:19px}.story-body h2{font-size:30px}.scene-text{font-size:13px}.story-body blockquote{font-size:15px}.choices{grid-template-columns:1fr}.choice{padding:14px}.conversation{padding:18px}.conversation-intro{align-items:flex-start}.conversation-badge{display:none}.conversation-intro h2{font-size:27px}.cast-member{gap:7px;padding:7px}.portrait{width:41px;height:46px;background-size:265px 130px}.portrait.sori{background-position:-17px -23px}.portrait.jae{background-position:-186px -23px}.cast-name{font-size:13px}.cast-name small{font-size:9px}.cast-chevron{font-size:12px}.questions{grid-template-columns:1fr 1fr}.question{padding:11px 9px;font-size:11px}.reply{font-size:18px}.talk-reply{padding:17px}.timeline{grid-template-columns:1fr}.world-cards{grid-template-columns:1fr}.world-card:last-child{grid-column:auto}.worlds{padding-top:30px}.site-footer,.micro-footer{flex-direction:column;gap:8px}.ending-actions{flex-direction:column;align-items:stretch}.ending-fork{white-space:normal}}
 @media(hover:hover){.reset-btn:hover,.fork-btn:hover{text-decoration-color:#996179}.world-card a:hover{color:#a36a87}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* V2 — storyboard workspace: time flows horizontally; dialogue is next to the scene */
+.page-intro{padding:29px 0 21px;align-items:center}
+.page-intro h1{font-size:clamp(30px,3vw,44px);line-height:1.1;margin:9px 0}
+.page-intro p{font-size:12px;max-width:750px}
+.intro-note{margin-left:auto}
+.reader-layout{display:block}
+.journey{position:static;display:block;padding:18px 22px 14px;border-radius:17px;margin:0 0 20px}
+.journey-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;min-width:0}
+.journey-heading h2{margin:6px 0 0;font-size:21px;letter-spacing:-.045em;line-height:1.15}
+.journey-heading h2 br{display:none}
+.journey-actions{display:flex;align-items:center;gap:10px;min-width:0}
+.branch-count{white-space:nowrap;color:#a48192;font-size:10px;font-weight:800;letter-spacing:.09em}
+.journey .select-wrap{min-width:155px;max-width:275px}
+.journey .select-wrap select{padding:10px 28px 10px 12px;font-size:11px}
+.journey .select-wrap::after{top:5px}
+.journey .reset-btn{width:auto;margin:0;white-space:nowrap;padding:11px 14px;font-size:10px}
+.journey .timeline{display:flex;overflow-x:auto;overscroll-behavior-x:contain;gap:10px;margin:14px 0 0;padding:0 2px 7px;border:0;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:#d4b9c5 transparent}
+.journey .moment{position:relative;flex:1 0 158px;min-width:158px;max-width:265px;padding:11px 12px;border:1px solid #e7dce1;background:#fffcfb;border-radius:11px;scroll-snap-align:start}
+.journey .moment::before{display:none}
+.journey .moment.current{background:#f7e9ef;border-color:#b78aa0;box-shadow:inset 0 0 0 1px #ba91a435}
+.journey .moment strong{font-size:11px;margin-bottom:4px}
+.journey .moment small{font-size:9.5px;overflow-wrap:anywhere}
+.journey .fork-btn{margin-top:6px;font-size:10px;min-height:20px}
+.main-column{min-width:0}
+.reading-progress{padding:0 2px 10px}
+.reader-duo{display:grid;grid-template-columns:minmax(0,1.17fr) minmax(315px,.83fr);align-items:stretch;gap:16px}
+.scene-card{min-width:0;display:flex;flex-direction:column;border-radius:17px}
+.scene-media{height:clamp(200px,21vw,294px)}
+.scene-media img{object-position:50% 47%}
+.story-body{padding:21px 23px 24px;display:flex;flex-direction:column;flex:1}
+.story-body h2{font-size:clamp(25px,2.25vw,34px);margin:10px 0}
+.scene-text{font-size:12px;line-height:1.7}
+.story-body blockquote{font-size:15px;margin:13px 0 15px;padding:4px 0 4px 13px}
+.choice-header{padding-top:13px;margin-top:auto}
+.choice-header h3{font-size:18px}
+.choices{grid-template-columns:1fr;gap:8px}
+.choice{padding:11px 13px;border-radius:11px;gap:11px}
+.choice-num{width:28px;height:28px;font-size:10px}
+.choice-copy strong{font-size:12px}
+.choice-copy small{font-size:10px;margin-top:3px}
+.arrow{font-size:19px}
+.conversation{margin-top:0;min-width:0;border-radius:17px;padding:20px 21px 18px;display:flex;flex-direction:column}
+.conversation-intro{align-items:flex-start;margin:0 0 17px}
+.conversation-intro h2{font-size:clamp(23px,2.12vw,32px);margin:8px 0}
+.conversation-intro p{font-size:12px;line-height:1.6}
+.conversation-badge{display:none}
+.talk-layout{display:flex;flex-direction:column;gap:13px;flex:1}
+.cast{grid-template-columns:1fr 1fr}
+.cast-member{padding:7px;gap:7px}
+.portrait{width:43px;height:47px;background-size:265px 130px}
+.portrait.sori{background-position:-17px -23px}
+.portrait.jae{background-position:-186px -23px}
+.cast-name{font-size:13px}
+.cast-name small{font-size:9px}
+.character-bio{margin:10px 0 8px;min-height:0;font-size:11px}
+.questions-label{margin:7px 0 9px}
+.questions{gap:7px}
+.question{padding:10px 11px;font-size:10.5px}
+.talk-reply{padding:17px;min-height:168px;margin-top:auto}
+.reply{font-size:clamp(16px,1.3vw,19px);line-height:1.53;margin:15px 0 auto;min-height:0}
+.talk-disclosure{margin-top:20px;padding-top:11px;font-size:9px}
+.micro-footer{padding:15px 2px 0}
+.official-cover-link{position:relative;min-width:92px;width:92px;display:block;align-self:stretch;background:#e8bd7a;border-radius:12px;overflow:hidden;text-decoration:none}
+.official-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:1}
+.official-cover-fallback{position:absolute;inset:0;display:grid;place-items:center;font-size:42px;color:#694b52}
+.official-cover-link.cover-error .official-cover{display:none}
+.cover-credit{display:block;color:#9f919a;font-size:9px;line-height:1.5;margin:8px 0}
+.worlds{margin-top:32px}
+@media(min-width:1500px){.reader-duo{grid-template-columns:minmax(0,1.19fr) minmax(0,.81fr)}.scene-media{height:300px}}
+@media(max-width:1140px){.reader-duo{grid-template-columns:minmax(0,1.05fr) minmax(290px,.95fr);gap:12px}.conversation{padding:17px}.story-body{padding:17px}.scene-media{height:215px}.cast{grid-template-columns:1fr}.portrait{width:39px;height:43px}.question{font-size:10px;padding:9px}}
+@media(max-width:800px){.journey{padding:16px;margin-bottom:15px}.reader-duo{grid-template-columns:1fr}.conversation{margin-top:0}.scene-media{height:clamp(220px,50vw,370px)}.story-body{padding:24px}.choices{grid-template-columns:repeat(2,minmax(0,1fr))}.cast{grid-template-columns:1fr 1fr}.conversation{padding:23px}.talk-layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.talk-reply{margin-top:0}.journey .timeline{display:flex;grid-template-columns:none}.journey .moment{padding:11px 12px}.journey-heading h2{font-size:20px}}
+@media(max-width:560px){.page-intro{padding:22px 0 19px}.page-intro h1{font-size:32px}.intro-note{display:none}.journey{padding:13px}.journey-heading{display:block}.journey-heading h2{margin:4px 0 13px;font-size:19px}.journey-actions{gap:7px}.branch-count{font-size:8px}.journey .select-wrap{flex:1;min-width:0}.journey .reset-btn{font-size:9px;padding:10px}.journey .timeline{margin-top:12px}.journey .moment{flex:0 0 168px}.reading-progress{font-size:8px}.scene-media{height:225px}.story-body{padding:20px}.choices{grid-template-columns:1fr}.conversation{padding:19px}.conversation-intro h2{font-size:26px}.talk-layout{display:flex;gap:14px}.talk-reply{min-height:170px}.cast{grid-template-columns:1fr 1fr}.world-cards{grid-template-columns:1fr}.world-card:last-child{grid-column:auto}.world-mark{width:76px;min-width:76px}}
+@media(prefers-reduced-motion:reduce){.journey .timeline{scroll-snap-type:none}}
