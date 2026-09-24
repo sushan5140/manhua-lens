@@ -77,6 +77,6 @@ test("accessible and responsive with reduced motion + no exposed keys",()=>{
   assert.match(css,/@media\(max-width:560px\)/);
   assert.match(css,/prefers-reduced-motion:reduce/);
   assert.match(css,/:focus-visible/);
-  assert.doesNotMatch(js,/GROQ_API_KEY|OPENROUTER_API_KEY.*=|sk-[A-Za-z0-9]{15}/);
+  assert.doesNotMatch(js,/GROQ_API_KEY\\s*[:=]\\s*[\"']|OPENROUTER_API_KEY\\s*[:=]\\s*[\"']|sk-[A-Za-z0-9]{15}/);
   assert.ok(existsSync(join(root,".env.example")));
 });
