@@ -1,29 +1,41 @@
-name: Manhua Multiverse engine (research preview)
+name: Manhua Multiverse interactive world
 on:
   pull_request:
     paths:
       - "multiverse/**"
       - "tests/multiverse.test.mjs"
       - "tests/multiverse-ui.test.mjs"
+      - "tests/test_multiverse_server.py"
       - ".github/workflows/manhua-multiverse.yml"
   workflow_dispatch:
 jobs:
-  story-engine:
+  story-world:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Validate story-engine syntax
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate frontend and offline story engine syntax
         run: |
           node --check multiverse/story.mjs
+          node --check multiverse/engine.mjs
+          node --check multiverse/live.mjs
           node --check multiverse/app.mjs
-      - name: Test causal story engine
+          python -m py_compile multiverse/server.py
+      - name: Test dynamic timelines, UI and original V0 compatibility
         run: node --test tests/multiverse.test.mjs tests/multiverse-ui.test.mjs
-      - name: Check standalone entry and original extension untouched
+      - name: Test live API contract and HTTP interactions
+        run: python -m unittest discover -s tests -p "test_multiverse_server.py" -v
+      - name: Check standalone entry, no bundled secret and original extension isolation
         run: |
           test -s multiverse/index.html
           test -s multiverse/style.css
+          test -s multiverse/server.py
+          test -s multiverse/.env.example
+          ! git ls-files --error-unmatch multiverse/.env >/dev/null 2>&1
           git fetch origin main --depth=1
           git diff --quiet origin/main HEAD -- manifest.json background.js content.js voice_server/
