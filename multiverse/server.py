@@ -212,9 +212,8 @@ def option_hints(state):
     return hints[:5]
 
 def illegal_transition(scene, changes, state):
-    key = "silver key" in state["inventory"] or "silver key" in changes.get("add_items", [])
-    evidence = bool(set(state["evidence"] + changes.get("add_evidence", []))
-                    & {"ledger", "jae_secret", "clock_marks"})
+    key = "silver key" in state["inventory"]
+    evidence = bool(set(state["evidence"]) & {"ledger", "jae_secret", "clock_marks"})
     flags = set(changes.get("add_flags", []))
     if scene == "city" or "clock_restored" in flags:
         if not key or not evidence:
@@ -222,6 +221,12 @@ def illegal_transition(scene, changes, state):
     if scene == "pact" or "memory_traded" in flags:
         if not key:
             return "The memory bargain requires the silver key."
+    if "clock_restored" in flags and scene != "city":
+        return "Clock restoration requires the restored-city scene."
+    if "clock_broken" in flags and scene != "freedom":
+        return "Breaking the clock requires a changed-world scene."
+    if "memory_traded" in flags and scene != "pact":
+        return "A memory bargain requires the pact scene."
     if "clock_broken" in flags and "clock_restored" in state["flags"]:
         return "This timeline already restored the clock."
     if "clock_restored" in flags and "clock_broken" in state["flags"]:
@@ -374,11 +379,14 @@ def call_llm(messages, json_mode=False):
     except (KeyError, IndexError, ValueError, TypeError):
         raise RuntimeError("The model returned an unexpected response.") from None
 
-def trimmed_branch(branch):
-    # bounded context, one branch only; a different timeline is never injected
+def trimmed_branch(branch, character=None):
+    # AI character chat sees its OWN dialogue, plus public action events; private
+    # conversation with another character is not automatically shared.
+    events = [e for e in branch["events"]
+              if character is None or e["type"] == "action" or e.get("character") == character]
     return [{"type":e["type"],"text":e["text"],
              "result":e.get("narrative",e.get("reply",""))[:500],
-             "scene":e.get("scene")} for e in branch["events"][-20:]]
+             "scene":e.get("scene")} for e in events[-20:]]
 
 def act(world, text):
     branch = validate_world(world)
@@ -428,7 +436,7 @@ def chat(world, character, text):
         answer=offline_chat(character,text,state,branch)
     else:
         context={"character":CHARACTERS[character],"current_state":state,
-                 "events":trimmed_branch(branch),
+                 "events":trimmed_branch(branch,character),
                  "user_says":text}
         answer=call_llm([{"role":"system","content":CHAT_SYSTEM},
                          {"role":"user","content":json.dumps(context,ensure_ascii=False)}])
