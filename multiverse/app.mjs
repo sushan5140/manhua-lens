@@ -187,4 +187,8 @@ $("restart").addEventListener("click",() => {
   render();
   goToReader();
 });
+// The external reference image is optional: never let third-party hotlinking break the reader.
+document.querySelector('.official-cover')?.addEventListener('error', event => {
+  event.currentTarget.closest('.official-cover-link')?.classList.add('cover-error');
+});
 render();
