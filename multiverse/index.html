@@ -19,10 +19,14 @@
 <section id="journey" class="journey" aria-label="Your parallel timelines">
 <div class="journey-top"><div><span class="eyebrow">THE MULTIVERSE</span><h2>Your story. Every version.</h2></div><div class="journey-tools">
 <label for="branch-select" class="visually-hidden">Switch timeline</label><select id="branch-select"></select>
-<button type="button" id="fork-now" class="subtle">✧ Fork now</button><button type="button" id="export-world" class="subtle" title="Download your timelines as JSON">⇩ Save</button><button type="button" id="import-world" class="subtle" title="Open a saved timelines JSON file">⇧ Open</button><input type="file" id="world-file" accept=".json,application/json" class="visually-hidden">
+<button type="button" id="fork-now" class="subtle">✧ Fork now</button><button type="button" id="compare-toggle" class="subtle">⇄ Compare worlds</button><button type="button" id="export-world" class="subtle" title="Download your timelines as JSON">⇩ Save</button><button type="button" id="import-world" class="subtle" title="Open a saved timelines JSON file">⇧ Open</button><input type="file" id="world-file" accept=".json,application/json" class="visually-hidden">
 <button type="button" id="restart" class="subtle danger">↺ Reset</button>
 </div></div>
 <div class="timeline" id="timeline" aria-label="Story moments and branching points"></div>
+<div class="comparison" id="comparison" hidden>
+  <div class="comparison-heading"><span class="eyebrow">THE CONSEQUENCE OF ANOTHER CHOICE</span><label for="compare-select">OTHER TIMELINE</label><select id="compare-select"></select></div>
+  <div class="comparison-grid" id="comparison-grid"></div>
+</div>
 <div class="journey-foot"><span>↳ Select <b>Branch here</b> to try another action without erasing your original.</span><span id="branch-count">1 timeline</span></div>
 </section>
 <div class="reading-progress" id="experience"><span><span class="tiny-dot"></span> YOU ARE INSIDE THE STORY</span><span id="scene-number">SCENE 01 / THE STOLEN TOMORROW</span></div>
