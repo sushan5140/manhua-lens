@@ -105,3 +105,13 @@ test("timeline files export/import are browser-only and no key is stored",()=>{
   assert.match(js,/file\.text\(\)/);
   assert.doesNotMatch(js,/Authorization.*Bearer/);
 });
+
+test("real multiverse comparison uses current branches' replayed history",()=>{
+  assert.match(html,/id="compare-toggle"/);
+  assert.match(html,/id="comparison-grid"/);
+  assert.match(js,/function renderComparison\(\)/);
+  assert.match(js,/JSON\.stringify\(ours\.events\[divergence\]\)/);
+  assert.match(js,/replay\(theirs\)/);
+  assert.match(js,/Enter this timeline/);
+  assert.match(css,/\.comparison-grid\{display:grid/);
+});
