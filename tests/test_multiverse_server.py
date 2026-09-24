@@ -45,6 +45,19 @@ class EngineTests(unittest.TestCase):
         self.assertNotIn("silver key",SERVER.replay(w["branches"][0])["inventory"])
         w=SERVER.act(w,"Trade my memory to free everyone")["world"]
         self.assertNotIn("memory_traded",SERVER.replay(w["branches"][0])["flags"])
+    def test_offline_freeform_emotional_and_destructive_choices_have_different_effects(self):
+        w=SERVER.act(world(),"I hug Sori because she is frightened")["world"]
+        state=SERVER.replay(w["branches"][0])
+        self.assertEqual(state["trust"]["sori"],1)
+        self.assertEqual(state["scene"],"station")
+        w=SERVER.act(w,"I burn the ledger rather than read it")["world"]
+        state=SERVER.replay(w["branches"][0])
+        self.assertEqual(state["trust"]["sori"],-1)
+        self.assertNotIn("ledger",state["evidence"])
+        self.assertEqual(state["scene"],"archive")
+        w=SERVER.act(w,"I refuse to restore the clock")["world"]
+        self.assertNotIn("clock_restored",SERVER.replay(w["branches"][0])["flags"])
+
     def test_chat_is_not_action_and_has_independent_state(self):
         w=SERVER.chat(world(),"sori","What happened before?")["world"]
         self.assertEqual(SERVER.replay(w["branches"][0])["turn"],0)
