@@ -5,7 +5,7 @@ import {dirname,join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {
   newWorld,loadWorld,replay,forkWorld,switchWorld,moments,
-  transcript,lastOptions,lastEvent,OPENING_OPTIONS
+  transcript,lastOptions,lastEvent,OPENING_OPTIONS,migrateLegacy
 } from "../multiverse/engine.mjs";
 const root=join(dirname(fileURLToPath(import.meta.url)),"..","multiverse");
 const html=readFileSync(join(root,"index.html"),"utf8");
@@ -79,4 +79,29 @@ test("accessible and responsive with reduced motion + no exposed keys",()=>{
   assert.match(css,/:focus-visible/);
   assert.doesNotMatch(js,/GROQ_API_KEY\\s*[:=]\\s*[\"']|OPENROUTER_API_KEY\\s*[:=]\\s*[\"']|sk-[A-Za-z0-9]{15}/);
   assert.ok(existsSync(join(root,".env.example")));
+});
+
+test("previous saved V1 branches migrate independently and retain causal items",()=>{
+  const legacy={version:1,active:"branch-2",nextId:3,branches:[
+    {id:"branch-1",name:"Original timeline",events:["follow_sori","read_ledger","restore"]},
+    {id:"branch-2",name:"Alternative",events:["follow_jae","leave_key","shatter"]}
+  ]};
+  const imported=migrateLegacy(JSON.stringify(legacy));
+  assert.equal(imported.version,2);
+  assert.equal(imported.active,"thread-2");
+  assert.equal(imported.branches.length,2);
+  assert.equal(replay(imported.branches[0]).scene,"city");
+  assert.ok(replay(imported.branches[0]).inventory.includes("silver key"));
+  assert.equal(replay(imported.branches[1]).scene,"freedom");
+  assert.equal(replay(imported.branches[1]).inventory.length,0);
+  assert.deepEqual(migrateLegacy("nonsense"),newWorld());
+});
+test("timeline files export/import are browser-only and no key is stored",()=>{
+  assert.match(html,/id="export-world"/);
+  assert.match(html,/id="import-world"/);
+  assert.match(html,/id="world-file"/);
+  assert.match(js,/migrateLegacy\(previous\)/);
+  assert.match(js,/new Blob\(\[JSON\.stringify\(world/);
+  assert.match(js,/file\.text\(\)/);
+  assert.doesNotMatch(js,/Authorization.*Bearer/);
 });
