@@ -15,7 +15,7 @@ import re
 import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib import error, request
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, unquote
 
 ROOT = Path(__file__).resolve().parent.parent
 DIR = Path(__file__).resolve().parent
@@ -135,6 +135,9 @@ def validate_world(world):
                 raise ValueError("Invalid event text.")
             if event["type"] == "action":
                 normalize_event(event)
+                prior = replay({"events": events[:events.index(event)]})
+                if illegal_transition(event["scene"], event.get("changes", {}), prior):
+                    raise ValueError("A saved event violates this timeline\x27s causal history.")
             elif event.get("character") not in CHARACTERS or not isinstance(event.get("reply"), str) or len(event["reply"]) > 2500:
                 raise ValueError("Invalid chat event.")
     if world.get("active") not in ids:
@@ -159,6 +162,8 @@ def normalize_event(event):
         values = changes.get(key, [])
         if not isinstance(values, list) or len(values) > 4 or any(v not in allowed for v in values):
             raise ValueError("Invalid state transition.")
+    if not isinstance(changes.get("trust", {}), dict):
+        raise ValueError("Invalid relationships.")
     for key, score in changes.get("trust", {}).items():
         if key not in CHARACTERS or type(score) is not int or not -2 <= score <= 2:
             raise ValueError("Invalid relationship change.")
@@ -449,7 +454,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
     def do_GET(self):
-        if urlsplit(self.path).path=="/api/health":
+        path = unquote(urlsplit(self.path).path)
+        if path=="/api/health":
             try:
                 mode=provider()[0]
             except ValueError:
@@ -457,10 +463,20 @@ class Handler(SimpleHTTPRequestHandler):
             self.reply(200,{"ok":True,"mode":mode,"live":mode not in ("offline","invalid-provider"),
                             "app":"Manhua Multiverse","version":2})
             return
-        if urlsplit(self.path).path=="/":
+        if path=="/":
             self.send_response(302)
             self.send_header("Location","/multiverse/")
             self.end_headers()
+            return
+        # Only serve the actual client, NEVER .env, source backend, Git metadata
+        # or other files in the repository. localhost does not remove this risk.
+        allowed_files={"/multiverse/","/multiverse/index.html",
+                       "/multiverse/style.css","/multiverse/live.mjs",
+                       "/multiverse/engine.mjs"}
+        if path not in allowed_files and not re.fullmatch(
+                r"/multiverse/art/(?:station|archive|tunnel|tower|city|pact|freedom)\.svg",
+                path):
+            self.send_error(404,"Not a public asset.")
             return
         super().do_GET()
     def do_POST(self):
