@@ -7,7 +7,7 @@ import sys
 import threading
 import unittest
 from unittest.mock import patch
-from urllib import request
+from urllib import request, error
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location("mm_server",ROOT / "multiverse" / "server.py")
@@ -72,6 +72,31 @@ class EngineTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,"continuity"):
                     SERVER.act(w,"Repair the clock anyway")
                 self.assertEqual(len(w["branches"][0]["events"]),0)
+    def test_character_does_not_receive_other_character_private_chat(self):
+        b={"events":[{"type":"chat","character":"jae","text":"My secret is the blue door",
+                      "reply":"I understand."},
+                     {"type":"action","text":"I search the platform",
+                      "title":"A search","scene":"station",
+                      "narrative":"You inspect the platform.","changes":{}},
+                     {"type":"chat","character":"sori","text":"Hello","reply":"Hello."}]}
+        sori=SERVER.trimmed_branch(b,"sori")
+        jae=SERVER.trimmed_branch(b,"jae")
+        self.assertEqual(len(sori),2)
+        self.assertEqual(len(jae),2)
+        self.assertNotIn("blue door",str(sori))
+        self.assertIn("blue door",str(jae))
+
+    def test_cannot_conjure_key_and_restore_in_same_action(self):
+        fake=json.dumps({"scene":"city","title":"A repaired clock",
+          "narrative":"The clock repairs itself without prior evidence.",
+          "changes":{"add_items":["silver key"],"add_evidence":["ledger"],
+                     "add_flags":["clock_restored"]},
+          "options":["Wait"]})
+        with patch.object(SERVER,"provider",return_value=("groq","","","")):
+            with patch.object(SERVER,"call_llm",return_value=fake):
+                with self.assertRaisesRegex(ValueError,"continuity"):
+                    SERVER.act(world(),"I invent a key and repair everything")
+
     def test_ai_real_freeform_output_changes_story(self):
         fake=json.dumps({"scene":"rooftop","title":"An encounter above Seoul",
            "narrative":"You take a route nobody expected. The unchanging clock stares back.",
@@ -122,6 +147,14 @@ class HttpTests(unittest.TestCase):
         self.assertIn('id="chat-form"',page)
         self.assertIn('class="reader-duo"',page)
         self.assertIn('id="timeline"',page)
+    def test_local_secrets_and_backend_are_not_public_assets(self):
+        base=f"http://127.0.0.1:{self.port}"
+        for target in ("/multiverse/.env","/multiverse/.env.example",
+                       "/multiverse/server.py","/.git/config","/multiverse/README.md"):
+            with self.assertRaises(error.HTTPError) as ctx:
+                request.urlopen(base+target,timeout=5)
+            self.assertEqual(ctx.exception.code,404,target)
+
     def test_action_and_chat_http_roundtrip(self):
         url=f"http://127.0.0.1:{self.port}"
         data=json.dumps({"world":world(),"text":"I ask for the silver key"}).encode()
