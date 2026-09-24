@@ -242,10 +242,36 @@ def offline_action(text, state):
     narrative = "You act rather than waiting for the story to choose for you. "
     def add(kind, value):
         changes.setdefault(kind, []).append(value)
-    if re.search(r"(key|silver)", q) and re.search(r"(take|ask|request|grab|give|show|borrow|steal|carry)", q):
+    if re.search(r"(burn|destroy|rip|tear).{0,32}(ledger|record|document)", q):
+        scene, title = "archive", "The evidence you destroyed"
+        add("remove_items", "ledger page")
+        changes["trust"] = {"sori": -2}
+        narrative = "You destroy the written record. Sori refuses to pretend the decision did not matter. If you previously read it, what you learned remains in memory, but its physical proof is gone."
+    elif re.search(r"(refuse|never|not|won.t|don.t).{0,24}(restore|repair|fix).{0,12}(clock|minute)", q):
+        title = "A refusal that changes the plan"
+        changes["trust"] = {"sori": -1}
+        narrative = "You refuse to repair the clock. Sori does not agree, but she cannot make the choice for you. The damaged minute remains unresolved while you look for another path."
+    elif re.search(r"(warn|tell|reveal|confess).{0,38}(sori|jae)", q) and re.search(r"(lie|liar|betray|secret|danger|truth)", q):
+        title = "An accusation reshapes the alliance"
+        changes["trust"] = {"sori": 1 if "sori" in q else -1,
+                             "jae": 1 if "jae" in q else -1}
+        changes["threat"] = 1
+        narrative = "You share a warning that cannot be taken back. The person you addressed begins questioning an old alliance, while the other notices the change in the room."
+    elif re.search(r"(comfort|hug|reassure|protect|help).{0,40}(sori|jae)", q):
+        who = "sori" if "sori" in q else "jae"
+        title = "A small act of trust"
+        changes["trust"] = {who: 1}
+        narrative = ("You offer support to " + who.title() +
+                     ". They do not instantly reveal every secret, but the gesture changes the way they speak to you on this path.")
+    elif re.search(r"(attack|hit|punch|fight|threaten).{0,45}(sori|jae|guard|stranger)", q):
+        who = "sori" if "sori" in q else "jae"
+        title = "An alliance put at risk"
+        changes["trust"] = {who: -2}
+        changes["threat"] = 2
+        narrative = "You turn the encounter into a confrontation. Nearby travellers retreat, and the person you challenged will not treat you as a trusted ally without a reason."
+    elif re.search(r"(key|silver)", q) and re.search(r"(take|ask|request|grab|give|show|borrow|steal|carry)", q):
         scene, title = "tunnel", "The key changes hands"
         add("add_items", "silver key")
-        add("trust", 1) if False else None
         changes["trust"] = {"jae": -1 if "steal" in q else 1}
         narrative = "Jae reveals the silver key. Its teeth are cut in the shape of a missing clock hand. He lets you take it, but reminds you that possession is not proof of what it can do."
     elif "key" in q and re.search(r"(leave|drop|throw|discard|hide)", q):
