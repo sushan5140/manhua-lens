@@ -418,6 +418,15 @@ def trimmed_branch(branch, character=None):
              "result":e.get("narrative",e.get("reply",""))[:500],
              "scene":e.get("scene")} for e in events[-20:]]
 
+def compact_history(branch, character=None):
+    """Bounded reminders from old moments beyond the 20 detailed recent events."""
+    events = [e for e in branch["events"]
+              if character is None or e["type"] == "action" or e.get("character") == character]
+    return [{"moment": i+1, "kind": e["type"],
+             "decision": e["text"][:110],
+             "result": e.get("title", e.get("reply", ""))[:125]}
+            for i, e in enumerate(events[:-20])]
+
 def act(world, text):
     branch = validate_world(world)
     text = clean_string(text, 700)
@@ -429,7 +438,8 @@ def act(world, text):
     if mode == "offline":
         result = offline_action(text,state)
     else:
-        context = {"facts":state, "events":trimmed_branch(branch), "action":text}
+        context = {"facts":state, "events":trimmed_branch(branch),
+                   "earlier_moments":compact_history(branch), "action":text}
         for attempt in range(2):
             raw = call_llm([{"role":"system","content":SYSTEM},
                             {"role":"user","content":json.dumps(context,ensure_ascii=False)}],
@@ -477,6 +487,7 @@ def chat(world, character, text):
     else:
         context={"character":CHARACTERS[character],"current_state":state,
                  "events":trimmed_branch(branch,character),
+                 "earlier_moments":compact_history(branch,character),
                  "user_says":text}
         answer=call_llm([{"role":"system","content":CHAT_SYSTEM},
                          {"role":"user","content":json.dumps(context,ensure_ascii=False)}])
