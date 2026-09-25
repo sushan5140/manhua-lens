@@ -36,7 +36,7 @@ You can instead run a local Ollama server and configure \`OLLAMA_BASE_URL=http:/
 
 - Do **not** paste keys into the browser, screenshots, chats, GitHub or your deployed frontend. \`multiverse/.env\` is gitignored and the local server explicitly refuses to serve it over HTTP.
 - Each cloud-provider call receives the relevant recent text, events and state of the **active branch**. Do not type private information into story actions or chat if you do not want it sent to the configured AI provider.
-- The model and network need to be available; a provider error stays visible and **does not** secretly switch to scripted mode or save a failed action.
+- The model and network need to be available; a provider error stays visible and **does not** secretly switch to scripted mode or save a failed action. Live prompts include replayed facts, recent detailed events and bounded reminders of older moments; private chats with other characters are not automatically included in the selected character's context.
 - The product is designed for localhost. This server is not a secure public-hosting architecture; production requires auth, per-user storage, rate limits, proxy/IP hardening, streaming, provider billing controls and proper licenses.
 
 ## What is functional
