@@ -112,3 +112,26 @@ If you find Manhua Lens useful, starring the repository helps other readers and 
 The reader has a **Voice** selector beside **Pace** for Sun-Hi (female, `ko-KR-SunHiNeural`) and Hyunsu Multilingual (male, `ko-KR-HyunsuMultilingualNeural`), alongside the existing local/device voices. Existing installations continue to default to Auto. The five shared speech pace choices remain 0.75×, 0.9×, 1.0×, 1.1× and 1.25×.
 
 Azure voices require an Azure Speech resource key and region **on a localhost voice server**. Do not embed Azure subscription keys in public extensions. For installation and two-server options, see [voice_server/README.md](voice_server/README.md#azure-korean-voice-choices-sun-hi-and-hyunsu-multilingual). The voice selector is available immediately, but selecting Azure before configuring the voice server produces an explanatory message rather than silently playing the wrong voice.
+
+---
+
+## Manhua Multiverse — independent interactive story world
+
+An original interactive world lives in the `multiverse/` directory on the
+`feature/manhua-multiverse-foundation` branch (PR #8), separate from the Manhua
+Lens browser extension. It now has **freeform story actions**, **freeform AI
+character chat when a local model provider is configured**, causal state
+replay, memory-scoped branching timelines, evidence/inventory/relationship
+changes, timeline comparison and browser-only backups.
+
+This is not the earlier static four-button V0 demo. **Do not start it with
+`python -m http.server`**; the new web frontend needs its local API:
+
+```powershell
+py .\multiverse\server.py
+```
+
+Open http://localhost:8080/multiverse/ and read
+[multiverse/README.md](multiverse/README.md) for live Groq / OpenRouter /
+Ollama configuration and Windows preview-worktree instructions. No commercial
+manhwa content is imported; real-title links remain permission-gated.

@@ -8,3 +8,8 @@ voice_server/voice_reference*.mp3
 voice_server/target_se.pth
 voice_server/checkpoints_v2/
 voice_server/.venv/
+
+# Manhua Multiverse local AI credentials
+multiverse/.env
+multiverse/.env.*
+!multiverse/.env.example
