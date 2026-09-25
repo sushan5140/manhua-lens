@@ -278,6 +278,10 @@ def offline_action(text, state):
         title = "The key left behind"
         add("remove_items", "silver key")
         narrative = "You leave the silver key behind. The choice closes off the simplest bargains at the clock. Jae watches without pretending you still have it."
+    elif re.search(r"(follow|walk|go|accompany).{0,35}sori", q):
+        scene, title = "archive", "Sori's invitation"
+        changes["trust"] = {"sori": 1}
+        narrative = "You follow Sori into the archive. She shows you where the erased futures are kept, but no evidence is granted simply for walking into the room. Ask her what she knows or investigate a record yourself."
     elif re.search(r"(ledger|archive|book|record|evidence|read|document)", q):
         scene, title = "archive", "A record of erased mornings"
         add("add_evidence", "ledger")
